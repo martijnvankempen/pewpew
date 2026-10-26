@@ -14,12 +14,13 @@ from aliens import ALIEN_H, ALIEN_W, PENS, POINTS, RGBS, SHEET, ZAP_PEN, Fleet, 
 from boss import BOSS_H, BOSS_W, RGB as BOSS_RGB, Boss
 from controls import Controls
 from fx import Flash, Glow, Particles, Popups, Rings, Shake, Starfield, draw_star
-from pew import CHARGE_FULL, SPRITE, SPRITE_W, STAR_RADIUS, Pew
+from pew import CHARGE_FULL, HOME_Y, SPRITE, SPRITE_W, STAR_RADIUS, Pew
 
 W = screen.width
 H = screen.height
 
 LOGO = image.load("assets/logo.png")
+FORKLIFT = image.load("assets/forklift.png")
 SMALL = font.nope
 LARGE = font.ziplock
 # Rows of the font bitmaps that hold capital letters (used for the gradients).
@@ -40,6 +41,18 @@ RED = color.rgb(226, 59, 59)
 CYAN = color.rgb(120, 220, 255)
 BOSS_PEN = color.rgb(*BOSS_RGB)
 MEDALS = (color.rgb(255, 215, 80), color.rgb(205, 215, 235), color.rgb(225, 150, 90))
+BLACK = color.rgb(0, 0, 0)
+INK = color.rgb(40, 22, 18)
+AD_YELLOW = color.rgb(255, 212, 55)
+AD_RAY = color.rgb(255, 188, 30)
+DUST = color.rgb(150, 120, 80)
+# Badge drawing on the HOW TO PLAY screen.
+CARD = color.rgb(108, 92, 231)
+CARD_PRINT = color.rgb(128, 112, 240)
+BODY = color.rgb(196, 186, 226)
+BEZEL = color.rgb(52, 50, 66)
+PAUSE_PEN = color.rgb(205, 195, 255)
+HOME_PEN = color.rgb(150, 140, 190)
 
 # Gradient styles for big text: (top, bottom, outline).
 GOLDEN = ((255, 250, 190), (255, 140, 30), (60, 20, 10))
@@ -49,7 +62,10 @@ ICE = ((225, 255, 255), (50, 140, 255), (10, 20, 60))
 
 MAX_FRAME_MS = 100
 BANNER_MS = 1300
-OVER_HOLD_MS = 900
+AD_MS = 6000
+AD_DRIVE_MS = 600
+HELP_MS = 7000
+HELP_GUARD_MS = 300
 CLEAR_MS = 2000
 WARNING_MS = 2600
 WAVE_BONUS = 100
@@ -60,7 +76,6 @@ COMBO_STEPS = (5, 10, 20, 30)
 TITLE_IDLE_MS = 9000
 DEMO_MS = 30000
 SCORES_MS = 6500
-OVER_IDLE_MS = 20000
 ENTRY_IDLE_MS = 30000
 BOARD_SIZE = 5
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
@@ -213,13 +228,124 @@ def bounce(t):
     return 1 - (0.04 - t * t) * 4 if t < 0.2 else 1.0
 
 
+def ad_forklift_x(t):
+    """The ad's forklift reverses in from the left and parks at x=6."""
+    return -FORKLIFT.width + (6 + FORKLIFT.width) * ease_out_back(t / AD_DRIVE_MS)
+
+
+def ink_text(text, cx, y):
+    """Dark text with a light drop shadow, for the yellow ad background."""
+    width, _ = screen.measure_text(text)
+    screen.pen = color.rgb(255, 255, 255, 150)
+    screen.text(text, cx - width / 2 + 1, y + 1)
+    screen.pen = INK
+    screen.text(text, cx - width / 2, y)
+
+
+def hazard(y, shift):
+    """A 6 px yellow-and-black hazard stripe across the screen."""
+    screen.pen = AD_YELLOW
+    screen.rectangle(0, y, W, 6)
+    screen.pen = BLACK
+    for x in range(-12, W + 12, 12):
+        x0 = x + shift
+        screen.triangle(vec2(x0, y), vec2(x0 + 6, y), vec2(x0, y + 6))
+        screen.triangle(vec2(x0, y), vec2(x0, y + 6), vec2(x0 - 6, y + 6))
+
+
+def dpad(cx, cy, size, pen):
+    thick = size / 3
+    screen.pen = pen
+    screen.rectangle(int(cx - thick / 2), int(cy - size / 2), int(thick), int(size))
+    screen.rectangle(int(cx - size / 2), int(cy - thick / 2), int(size), int(thick))
+
+
+def key(x, y, w, h, pen):
+    screen.pen = pen
+    screen.shape(shape.rounded_rectangle(x, y, w, h, 1))
+
+
+def arrow(x1, y1, x2, y2, pen):
+    screen.pen = pen
+    screen.line(int(x1), int(y1), int(x2), int(y2))
+    dx, dy = x2 - x1, y2 - y1
+    d = math.sqrt(dx * dx + dy * dy) or 1.0
+    ux, uy = dx / d, dy / d
+    bx, by = x2 - ux * 4, y2 - uy * 4
+    screen.triangle(vec2(x2, y2), vec2(bx - uy * 2.5, by + ux * 2.5), vec2(bx + uy * 2.5, by - ux * 2.5))
+
+
+# Where the physical buttons sit just off the screen (badge upright), in screen pixels.
+SELECT_X = 128
+SIDE_YS = (36, 88)
+
+
+def fat_arrow(x1, y1, x2, y2, pen):
+    """A bold 3 px arrow with a drop shadow, tip at (x2, y2)."""
+    dx, dy = x2 - x1, y2 - y1
+    d = math.sqrt(dx * dx + dy * dy) or 1.0
+    ux, uy = dx / d, dy / d
+    px, py = -uy, ux
+    bx, by = x2 - ux * 6, y2 - uy * 6
+    for ink, o in ((SHADOW, 1), (pen, 0)):
+        screen.pen = ink
+        a = vec2(x1 + px * 1.5 + o, y1 + py * 1.5 + o)
+        b = vec2(x1 - px * 1.5 + o, y1 - py * 1.5 + o)
+        c = vec2(bx - px * 1.5 + o, by - py * 1.5 + o)
+        e = vec2(bx + px * 1.5 + o, by + py * 1.5 + o)
+        screen.triangle(a, b, c)
+        screen.triangle(a, c, e)
+        screen.triangle(vec2(x2 + o, y2 + o), vec2(bx + px * 4.5 + o, by + py * 4.5 + o),
+                        vec2(bx - px * 4.5 + o, by - py * 4.5 + o))
+
+
+def point_select(now, text, pen=GOLD):
+    """Text with a bouncing arrow aimed at the real SELECT button just off the screen."""
+    bob = abs(math.sin(now / 160)) * 3
+    screen.font = SMALL
+    width, _ = screen.measure_text(text)
+    if badge.upside_down():
+        # Turned round, the buttons are above the screen and mirrored.
+        x = W - SELECT_X
+        fat_arrow(x, 15 - bob, x, 2 - bob, pen)
+        shadow_text(text, x + 7, 2, pen)
+    else:
+        fat_arrow(SELECT_X, H - 15 + bob, SELECT_X, H - 2 + bob, pen)
+        shadow_text(text, SELECT_X - 7 - width, H - 13, pen)
+
+
+def point_side(now, pen):
+    """Arrows aimed at the two real buttons on the badge's side edge."""
+    bob = abs(math.sin(now / 160)) * 3
+    for y in SIDE_YS:
+        if badge.upside_down():
+            fat_arrow(14 - bob, H - y, 1 - bob, H - y, pen)
+        else:
+            fat_arrow(W - 15 + bob, y, W - 2 + bob, y, pen)
+
+
+# HOW TO PLAY callouts around the badge drawing:
+# (label, colour, side: -1 left / 1 right, text y, arrow tip, frame around the control).
+HELP_CALLOUTS = (
+    ("FIRE", GOLD, -1, 26, (63, 37), (63, 32, 13, 13)),
+    ("MOVE", CYAN, 1, 33, (103, 40), (89, 33, 15, 15)),
+    ("PAUSE", PAUSE_PEN, -1, 42, (57, 46), (56, 39, 11, 11)),
+    ("BURST", PINK, 1, 63, (110, 70), (104, 58, 7, 24)),
+    ("MOVE", CYAN, -1, 84, (61, 93), (60, 88, 25, 10)),
+    ("FIRE", GOLD, 1, 86, (98, 93), (88, 88, 11, 10)),
+)
+HELP_LEFT = 46
+HELP_RIGHT = 121
+
+
 class Game:
     TITLE = 0
     PLAY = 1
     PAUSE = 2
-    OVER = 3
+    AD = 3
     ENTRY = 4
     SCORES = 5
+    HELP = 6
 
     FIGHT = 0
     CLEAR = 1
@@ -244,7 +370,6 @@ class Game:
         self.phase_until = 0
         self.phase_at = 0
         self.banner_until = 0
-        self.over_at = 0
         self.new_best = False
         self.demo = False
         self.freeze = 0
@@ -256,15 +381,13 @@ class Game:
         self.clear_text = ""
         self.perfect = False
         self.combo = 0
-        self.best_combo = 0
-        self.shots = 0
-        self.hits = 0
         self.wave_damage = 0
         self.rank = None
         self.entry_name = list(saved["name"])
         self.entry_pos = 0
         self.entry_at = 0
         self.highlight = None
+        self.help_attract = False
         self.state_at = 0
         self.title_at = 0
         self.title_landed = False
@@ -276,7 +399,7 @@ class Game:
     def set_state(self, state, now):
         self.state = state
         self.state_at = now
-        self.glow.breathe = state in (Game.TITLE, Game.SCORES) or (state == Game.PLAY and self.demo)
+        self.glow.breathe = state in (Game.TITLE, Game.SCORES, Game.HELP) or (state == Game.PLAY and self.demo)
 
     def go_title(self, now):
         self.demo = False
@@ -295,6 +418,13 @@ class Game:
         self.space.warp_target = 0.0
         self.set_state(Game.SCORES, now)
 
+    def show_help(self, now, attract=False):
+        """The controls card: it waits for SELECT, and only times out in the attract loop."""
+        self.demo = False
+        self.help_attract = attract
+        self.space.warp_target = 0.0
+        self.set_state(Game.HELP, now)
+
     def start(self, demo=False):
         self.demo = demo
         self.clock = 0
@@ -302,9 +432,6 @@ class Game:
         self.shown_score = 0.0
         self.wave = 1
         self.combo = 0
-        self.best_combo = 0
-        self.shots = 0
-        self.hits = 0
         self.freeze = 0
         self.ghosts = []
         self.callout = None
@@ -375,13 +502,20 @@ class Game:
         if self.demo:
             self.show_scores(now)
             return
-        self.over_at = now
         self.rank = board_rank(self.score)
         self.new_best = self.score > best_score()
         if self.score > saved["highscore"]:
             saved["highscore"] = self.score
             State.save("pewpew", saved)
-        self.set_state(Game.OVER, now)
+        self.particles.clear()
+        self.glow.alarm(now, AD_MS)
+        self.set_state(Game.AD, now)
+
+    def end_ad(self, now):
+        if self.rank is not None:
+            self.enter_name(now)
+        else:
+            self.go_title(now)
 
     def enter_name(self, now):
         self.entry_name = list(saved["name"])
@@ -417,7 +551,6 @@ class Game:
     def count_hit(self):
         before = self.multiplier()
         self.combo += 1
-        self.best_combo = max(self.best_combo, self.combo)
         after = self.multiplier()
         if after > before:
             self.call("COMBO x%d" % after, GOLDEN, 900)
@@ -442,6 +575,10 @@ class Game:
                 return True
         return False
 
+    def burst_pressed(self):
+        # Only the physical side buttons: up on the touch pad moves Pew instead.
+        return badge.buttons.pressed(BUTTON_UP) or badge.buttons.pressed(BUTTON_DOWN)
+
     def update(self, dt_ms):
         now = badge.ticks
         if self.state != Game.PAUSE:
@@ -456,7 +593,7 @@ class Game:
             self.freeze -= dt_ms
             if self.demo and self.any_pressed():
                 self.go_title(now)
-            elif badge.pressed(BUTTON_UP):
+            elif self.burst_pressed():
                 self.burst_queued = True
             return
 
@@ -467,7 +604,7 @@ class Game:
 
         if self.state == Game.TITLE:
             if badge.pressed(BUTTON_SELECT):
-                self.start()
+                self.show_help(now)
             elif badge.pressed(BUTTON_DOWN):
                 self.toggle_tilt()
                 self.title_at = min(self.title_at, now - 1200)
@@ -479,15 +616,23 @@ class Game:
                 self.start(demo=True)
         elif self.state == Game.SCORES:
             if badge.pressed(BUTTON_SELECT):
-                self.start()
+                self.show_help(now)
             elif self.any_pressed():
                 self.go_title(now)
             elif now - self.state_at > SCORES_MS:
+                self.show_help(now, attract=True)
+        elif self.state == Game.HELP:
+            t = now - self.state_at
+            if t > HELP_GUARD_MS and badge.pressed(BUTTON_SELECT):
+                self.start()
+            elif badge.pressed(BUTTON_BACK) or (self.help_attract and self.any_pressed()):
+                self.go_title(now)
+            elif self.help_attract and t > HELP_MS:
                 self.go_title(now)
         elif self.state == Game.PLAY:
             if self.demo:
                 if badge.pressed(BUTTON_SELECT):
-                    self.start()
+                    self.show_help(now)
                 elif self.any_pressed():
                     self.go_title(now)
                 elif now - self.state_at > DEMO_MS:
@@ -503,33 +648,15 @@ class Game:
                 self.set_state(Game.PLAY, now)
             elif badge.pressed(BUTTON_BACK):
                 self.go_title(now)
-        elif self.state == Game.OVER:
-            self.update_over(now)
+        elif self.state == Game.AD:
+            # Unskippable: no button does anything until the ad has run.
+            t = now - self.state_at
+            if t < AD_DRIVE_MS and random.random() < 0.6:
+                self.particles.burst(ad_forklift_x(t) + 10, 92, DUST, 1, 25)
+            if t >= AD_MS:
+                self.end_ad(now)
         elif self.state == Game.ENTRY:
             self.update_entry(now)
-
-    def update_over(self, now):
-        self.shown_score = min(self.score, self.shown_score + max(1.0, self.score / 40))
-        if self.rank is not None and (now // 160) % 3 == 0 and random.random() < 0.5:
-            self.particles.burst(random.uniform(10, W - 10), random.uniform(-4, 20),
-                                 PENS[random.randrange(3)], 3, 40)
-        if now - self.over_at <= OVER_HOLD_MS:
-            return
-        if badge.pressed(BUTTON_SELECT):
-            if self.rank is not None:
-                self.enter_name(now)
-            else:
-                self.start()
-        elif badge.pressed(BUTTON_BACK):
-            if self.rank is not None:
-                self.enter_name(now)
-            else:
-                self.go_title(now)
-        elif now - self.over_at > OVER_IDLE_MS:
-            if self.rank is not None:
-                self.enter_name(now)
-            else:
-                self.show_scores(now)
 
     def update_entry(self, now):
         name = self.entry_name
@@ -605,17 +732,20 @@ class Game:
         self.ghosts = [g for g in self.ghosts if g[3] > now]
 
         if self.demo:
-            axis = self.demo_axis()
+            axis = (self.demo_axis(), 0.0)
             fire = True
             use_burst = pew.charged()
         else:
             axis = self.controls.axis(dt_ms)
             fire = badge.held(BUTTON_SELECT) or badge.pressed(BUTTON_SELECT)
-            use_burst = badge.pressed(BUTTON_UP) or self.burst_queued
+            use_burst = self.burst_pressed() or self.burst_queued
         self.burst_queued = False
-        pew.move(axis, dt)
-        if fire and pew.fire(now):
-            self.shots += 1
+        pew.move(axis[0], axis[1], dt)
+        if not boss:
+            # Pew can't fly up into the fleet.
+            pew.y = max(pew.y, min(HOME_Y, fleet.bottom() + 2))
+        if fire:
+            pew.fire(now)
         if use_burst and pew.burst():
             self.burst_at = now
             self.call("OCTO-BURST!", ROSE, 900)
@@ -664,7 +794,7 @@ class Game:
         if self.phase == Game.FIGHT:
             if fleet.count == 0:
                 self.wave_cleared()
-            elif fleet.bottom() >= pew.y + 8:
+            elif fleet.bottom() >= HOME_Y + 8:
                 x, y = pew.centre()
                 self.particles.burst(x, y, RED, 16, 80)
                 self.shake.kick(6)
@@ -683,8 +813,6 @@ class Game:
                 cy = ay + ALIEN_H / 2
                 pew.stars.remove(star)
                 pew.add_charge()
-                if not star.burst:
-                    self.hits += 1
                 self.count_hit()
                 self.add_points(POINTS[row] * (2 if dove else 1), cx, ay, RGBS[row])
                 self.ghosts.append((ax, ay, row, self.clock + 70))
@@ -706,8 +834,6 @@ class Game:
                 x, y, killed = hit
                 pew.stars.remove(star)
                 pew.add_charge()
-                if not star.burst:
-                    self.hits += 1
                 self.count_hit()
                 self.add_points(BOSS_HIT, x, y, BOSS_RGB)
                 self.particles.burst(x, y, BOSS_PEN, 5, 45)
@@ -760,6 +886,10 @@ class Game:
             self.draw_title(now)
         elif self.state == Game.SCORES:
             self.draw_scores(now)
+        elif self.state == Game.HELP:
+            self.draw_help(now)
+        elif self.state == Game.AD:
+            self.draw_ad(now)
         else:
             self.draw_play(now)
         self.flash.draw()
@@ -776,7 +906,7 @@ class Game:
         self.particles.draw(ox, oy)
         self.rings.draw(ox, oy)
         self.popups.draw(ox, oy)
-        if self.state in (Game.OVER, Game.ENTRY):
+        if self.state == Game.ENTRY:
             screen.pen = DARK_VEIL
             screen.rectangle(0, 0, W, H)
             self.particles.draw(0, 0)
@@ -788,10 +918,8 @@ class Game:
             self.draw_veil()
             label("PAUSED", ICE).draw(W / 2, 44)
             screen.font = SMALL
-            centre_text("SELECT resume", 66, DIM)
-            centre_text("BACK title", 78, DIM)
-        elif self.state == Game.OVER:
-            self.draw_over(now)
+            centre_text("BACK: TITLE", 66, DIM)
+            point_select(now, "RESUME")
         elif self.state == Game.ENTRY:
             self.draw_entry(now)
         elif self.demo:
@@ -828,7 +956,8 @@ class Game:
         # One centre slot: the burst prompt blinks over the combo, which replaces HI.
         pew = self.pew
         if pew.charged() and not self.demo and (now // 250) % 2:
-            centre_text("UP: BURST!", 0, PINK)
+            centre_text("BURST!", 0, PINK)
+            point_side(now, PINK)
         elif mult > 1:
             centre_text("COMBO x%d" % mult, 0, GOLD if (now // 120) % 2 else PINK)
         elif self.demo:
@@ -905,11 +1034,7 @@ class Game:
             shadow_text(typed, (W - width) / 2, 80, PINK if typed == name or (age // 80) % 2 else WHITE)
 
     def draw_demo_overlay(self, now):
-        if (now // 600) % 2:
-            screen.pen = BAR_BACK
-            screen.rectangle(0, 68, W, 12)
-            screen.font = SMALL
-            centre_text("PRESS SELECT TO PLAY", 68, GOLD)
+        point_select(now, "PRESS TO PLAY")
 
     def draw_title(self, now):
         t = now - self.title_at
@@ -970,13 +1095,13 @@ class Game:
             return
         screen.font = SMALL
         pulse = 0.5 + 0.5 * math.sin(now / 160)
-        centre_text("PRESS SELECT", 77, color.rgb(255, int(200 + 55 * pulse), int(90 + 140 * pulse)))
         top = saved["board"][0] if saved["board"] else ["---", 0]
         if top[1] >= best_score():
-            centre_text("HI %d  %s" % (best_score(), top[0]), 88, DIM)
+            centre_text("HI %d  %s" % (best_score(), top[0]), 77, DIM)
         else:
-            centre_text("HI %d" % best_score(), 88, DIM)
-        centre_text("DOWN: TILT %s" % ("ON" if saved["tilt"] else "OFF"), 99, DIM)
+            centre_text("HI %d" % best_score(), 77, DIM)
+        centre_text("DOWN: TILT %s" % ("ON" if saved["tilt"] else "OFF"), 88, DIM)
+        point_select(now, "PRESS TO PLAY", color.rgb(255, int(200 + 55 * pulse), int(90 + 140 * pulse)))
 
     def draw_comet(self, now):
         if self.comet is None or now > self.comet[4]:
@@ -1017,33 +1142,130 @@ class Game:
             score = "%d" % value
             width, _ = screen.measure_text(score)
             shadow_text(score, x + W - 16 - width, y, pen)
-        if t > 1200 and (now // 500) % 2:
-            centre_text("PRESS SELECT", 105, GOLD)
+        if t > 1200:
+            point_select(now, "PRESS TO PLAY")
 
-    def draw_over(self, now):
-        age = now - self.over_at
-        label("GAME OVER", CRIMSON).draw(W / 2, 24, punch(age, 260))
+    def draw_help(self, now):
+        t = now - self.state_at
+        focus = (now // 900) % len(HELP_CALLOUTS)
+        screen.pen = PANEL
+        screen.rectangle(0, 0, W, H)
+
+        # The badge as it hangs on the lanyard: purple touch card on top, screen below.
+        screen.pen = CARD
+        screen.shape(shape.rounded_rectangle(54, 6, 52, 44, 4))
+        screen.pen = CARD_PRINT
+        screen.shape(shape.rounded_rectangle(57, 9, 46, 21, 3))
+        dpad(96, 40, 12, CYAN)
+        screen.pen = GOLD
+        screen.circle(vec2(69, 38), 4.5)
+        screen.pen = PAUSE_PEN
+        screen.circle(vec2(61, 44), 3.5)
+        key(74, 42, 5, 3, PAUSE_PEN)
+        key(81, 42, 5, 3, HOME_PEN)
+
+        screen.pen = BODY
+        screen.shape(shape.rounded_rectangle(54, 52, 52, 54, 6))
+        screen.pen = BEZEL
+        screen.rectangle(59, 56, 42, 28)
+        screen.pen = BLACK
+        screen.rectangle(61, 58, 38, 24)
+        screen.blit(SPRITE, rect(73, 64 + int(math.sin(now / 250)), 14, 12))
+        key(62, 90, 7, 6, CYAN)
+        key(76, 90, 7, 6, CYAN)
+        key(90, 90, 7, 6, GOLD)
+        key(106, 60, 3, 8, PINK)
+        key(106, 72, 3, 8, PINK)
+
         screen.font = SMALL
-        if age > 300:
-            centre_text("%d" % int(self.shown_score), 38, WHITE, 2)
-        if age > 600:
-            accuracy = 100 * self.hits // self.shots if self.shots else 0
-            centre_text("WAVE %d   HIT %d%%" % (self.wave, accuracy), 60, DIM)
-            centre_text("BEST COMBO %d" % self.best_combo, 72, DIM)
-        if age > 800:
-            if self.new_best:
-                centre_text("NEW HIGH SCORE!", 84, GOLD if (now // 150) % 2 else PINK)
-            elif self.rank is not None:
-                centre_text("TOP %d SCORE!" % BOARD_SIZE, 84, GOLD)
+        # The SELECT pointer takes the top corner when the badge is held upside down.
+        title_y = 98 if badge.upside_down() else 2
+        shadow_text("HOW TO", 4, title_y, WHITE)
+        shadow_text("PLAY", 4, title_y + 10, WHITE)
+
+        # Labelled arrows to each control; one at a time turns white and gets a blinking frame.
+        for i, (text, pen, side, y, tip, box) in enumerate(HELP_CALLOUTS):
+            width, _ = screen.measure_text(text)
+            cy = y + 7
+            if side < 0:
+                tx, start = HELP_LEFT - width, HELP_LEFT + 2
             else:
-                centre_text("BEST %d" % best_score(), 84, DIM)
-        if age > OVER_HOLD_MS:
-            pen = WHITE if (now // 400) % 2 else GOLD
-            if self.rank is not None:
-                centre_text("SELECT: ENTER NAME", 98, pen)
-            else:
-                centre_text("SELECT: PLAY AGAIN", 96, pen)
-                centre_text("BACK: TITLE", 107, DIM)
+                tx = min(HELP_RIGHT, W - 2 - width)
+                start = tx - 3
+            ink = WHITE if i == focus else pen
+            shadow_text(text, tx, y, ink)
+            nudge = math.sin(now / 120) * 1.5 if i == focus else 0
+            dx, dy = tip[0] - start, tip[1] - cy
+            d = math.sqrt(dx * dx + dy * dy) or 1.0
+            arrow(start, cy, tip[0] + dx / d * nudge, tip[1] + dy / d * nudge, ink)
+        if (now // 300) % 2 == 0:
+            bx, by, bw, bh = HELP_CALLOUTS[focus][5]
+            screen.pen = WHITE
+            screen.shape(shape.rectangle(bx, by, bw, bh).stroke(1))
+
+        if t >= HELP_GUARD_MS:
+            point_select(now, "PRESS TO PLAY")
+
+    def draw_ad(self, now):
+        t = now - self.state_at
+
+        # Infomercial sunburst behind the forklift.
+        screen.pen = AD_YELLOW
+        screen.rectangle(0, 0, W, H)
+        screen.pen = AD_RAY
+        cx, cy = 35, 64
+        spin = now / 1500
+        for i in range(12):
+            a = spin + i * math.pi / 6
+            screen.triangle(vec2(cx, cy), vec2(cx + math.cos(a) * 220, cy + math.sin(a) * 220),
+                            vec2(cx + math.cos(a + 0.26) * 220, cy + math.sin(a + 0.26) * 220))
+
+        rumble = int(math.sin(t / 40)) if t < AD_DRIVE_MS else 0
+        screen.blit(FORKLIFT, vec2(int(ad_forklift_x(t)), 36 + rumble))
+        self.particles.draw(0, 0)
+
+        right = 112
+        screen.font = SMALL
+        if t > 200:
+            ink_text("GET YOURSELF", right, 18)
+        if t > 400:
+            label("FORKLIFT", CRIMSON).draw(right, 38, punch(t - 400))
+        if t > 650:
+            label("CERTIFIED!", CRIMSON).draw(right, 56, punch(t - 650), (now // 150) % 6 == 0)
+        for i in range(5):
+            # Five-star rating, one star at a time.
+            age = t - 1400 - i * 180
+            if age > 0:
+                draw_star(right - 24 + i * 12, 67, 3.5 * min(1.0, age / 150) + 0.01, now * 0.2 + i * 40, RED)
+        if t > 1000:
+            screen.font = SMALL
+            ink_text("SPONSORED BY", right, 72)
+            label("CoE", ICE).draw(right, 90, punch(t - 1000))
+
+        shift = int(now / 40) % 12
+        hazard(11, shift)
+        hazard(100, -shift)
+
+        # Top bar: AD tag, GAME OVER, final score. Bottom bar: the bad news, countdown, progress.
+        screen.pen = BLACK
+        screen.rectangle(0, 0, W, 11)
+        screen.rectangle(0, 106, W, 14)
+        screen.pen = AD_YELLOW
+        screen.shape(shape.rounded_rectangle(1, 0, 17, 11, 2))
+        screen.font = SMALL
+        screen.pen = BLACK
+        screen.text("AD", 4, -1)
+        centre_text("GAME OVER", -1, WHITE)
+        score = "%d" % self.score
+        width, _ = screen.measure_text(score)
+        shadow_text(score, W - 2 - width, -1, GOLD)
+        shadow_text("CAN'T SKIP THIS AD", 2, 106, DIM)
+        left_ms = max(0, AD_MS - t)
+        countdown = "0:%02d" % ((left_ms + 999) // 1000)
+        width, _ = screen.measure_text(countdown)
+        shadow_text(countdown, W - 2 - width, 106, WHITE)
+        screen.pen = AD_YELLOW
+        screen.rectangle(0, H - 2, int(W * min(1.0, t / AD_MS)), 2)
 
     def draw_entry(self, now):
         label("NEW HIGH SCORE!" if self.new_best else "TOP %d!" % BOARD_SIZE, GOLDEN).draw(W / 2, 16)
@@ -1066,7 +1288,8 @@ class Game:
             screen.pen = pen
             screen.rectangle(x - 1, 73, 18, 1)
         centre_text("UP/DOWN: LETTER", 90, DIM)
-        centre_text("SELECT: NEXT", 101, DIM)
+        point_side(now, DIM)
+        point_select(now, "SAVE" if self.entry_pos == 2 else "NEXT")
 
 
 game = Game()

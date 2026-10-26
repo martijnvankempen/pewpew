@@ -6,7 +6,7 @@ TILT_SMOOTH_MS = 80
 
 
 class Controls:
-    """Left/right movement from the buttons, plus optional accelerometer tilt."""
+    """Movement: physical LEFT/RIGHT and tilt steer sideways, the touch pad steers in 8 directions."""
 
     def __init__(self, tilt=False):
         self.tilt = tilt
@@ -20,11 +20,18 @@ class Controls:
         self.lean = 0.0
 
     def axis(self, dt_ms):
+        """(x, y) movement, each from -1 to 1."""
         move = 0.0
-        if badge.held(BUTTON_LEFT):
+        if badge.buttons.held(BUTTON_LEFT):
             move -= 1.0
-        if badge.held(BUTTON_RIGHT):
+        if badge.buttons.held(BUTTON_RIGHT):
             move += 1.0
+
+        # Diagonals on the touch pad come back as (1, 1); keep them at full speed, not faster.
+        pad = badge.pad.direction()
+        size = max(1.0, pad.length())
+        move += pad.x / size
+        rise = pad.y / size
 
         if self.tilt:
             raw = badge.imu()[0] / IMU_GRAVITY - self.level
@@ -36,4 +43,4 @@ class Controls:
                 sign = 1.0 if self.lean > 0 else -1.0
                 move += sign * (size - TILT_DEADZONE) / (TILT_FULL - TILT_DEADZONE)
 
-        return max(-1.0, min(1.0, move))
+        return max(-1.0, min(1.0, move)), rise

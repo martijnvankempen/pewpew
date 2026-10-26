@@ -3,13 +3,16 @@
 
 from pathlib import Path
 
+import colorsys
 import math
 import random
+from collections import deque
 
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "pew.png"
+FORKLIFT_SOURCE = ROOT / "forklift.jpg"
 APP = ROOT / "badge" / "apps" / "pewpew"
 ASSETS = APP / "assets"
 
@@ -372,6 +375,73 @@ def make_planet(size=26):
     return big.resize((size, size), Image.LANCZOS)
 
 
+FORKLIFT_WORK = 240
+FORKLIFT_MAX = (64, 58)
+# Spots painted over before shrinking, as fractions of the photo:
+# the lettering on the counterweight and the sticker on the side.
+BRAND_BOXES = ((0.60, 0.37, 0.845, 0.45), (0.20, 0.72, 0.245, 0.765))
+# The white work light on the mast; everything else near-white is background.
+KEEP_BOX = (0.20, 0.25, 0.28, 0.33)
+# Below this line the grey floor shadow is removed too.
+SHADOW_TOP = 0.8
+
+
+def make_forklift():
+    """The ad's forklift: background removed, branding painted out, orange paint turned red."""
+    src = Image.open(FORKLIFT_SOURCE).convert("RGB")
+    w = FORKLIFT_WORK
+    h = round(src.height * w / src.width)
+    img = src.resize((w, h), Image.LANCZOS).convert("RGBA")
+    px = img.load()
+
+    for fx0, fy0, fx1, fy1 in BRAND_BOXES:
+        box = [(x, y) for y in range(int(fy0 * h), int(fy1 * h)) for x in range(int(fx0 * w), int(fx1 * w))]
+        paint = [px[p] for p in box if min(px[p][:3]) <= 150]
+        if not paint:
+            continue
+        fill = tuple(sorted(c[i] for c in paint)[len(paint) // 2] for i in range(3)) + (255,)
+        for p in box:
+            if min(px[p][:3]) > 150:
+                px[p] = fill
+
+    kx0, ky0, kx1, ky1 = KEEP_BOX[0] * w, KEEP_BOX[1] * h, KEEP_BOX[2] * w, KEEP_BOX[3] * h
+    for y in range(h):
+        for x in range(w):
+            if min(px[x, y][:3]) >= 215 and not (kx0 <= x < kx1 and ky0 <= y < ky1):
+                px[x, y] = (0, 0, 0, 0)
+
+    def floor_shadow(x, y):
+        if y < SHADOW_TOP * h:
+            return False
+        r, g, b, a = px[x, y]
+        return a and min(r, g, b) >= 150 and max(r, g, b) - min(r, g, b) < 25
+
+    queue = deque((x, y) for y in range(int(SHADOW_TOP * h), h) for x in range(w) if not px[x, y][3])
+    while queue:
+        x, y = queue.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < w and 0 <= ny < h and floor_shadow(nx, ny):
+                px[nx, ny] = (0, 0, 0, 0)
+                queue.append((nx, ny))
+
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if not a:
+                continue
+            hue, sat, val = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if 0.03 <= hue <= 0.14 and sat > 0.35 and val > 0.25:
+                r, g, b = colorsys.hsv_to_rgb(0.0, min(1.0, sat * 1.1), val)
+                px[x, y] = (int(r * 255), int(g * 255), int(b * 255), 255)
+
+    img = img.crop(img.getbbox())
+    scale = min(FORKLIFT_MAX[0] / img.width, FORKLIFT_MAX[1] / img.height)
+    img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+    alpha = img.getchannel("A").point(lambda a: 255 if a >= 128 else 0)
+    img.putalpha(alpha)
+    return img
+
+
 def main():
     src = Image.open(SOURCE).convert("RGB")
     px = src.load()
@@ -388,6 +458,10 @@ def main():
     save(paletted(make_boss()), ASSETS / "boss.png")
     save(make_nebula(), ASSETS / "nebula.png")
     save(make_planet(), ASSETS / "planet.png")
+    if FORKLIFT_SOURCE.exists():
+        save(make_forklift(), ASSETS / "forklift.png")
+    else:
+        print(f"skipped forklift.png ({FORKLIFT_SOURCE.name} not found)")
 
 
 if __name__ == "__main__":

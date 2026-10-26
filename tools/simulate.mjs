@@ -10,6 +10,8 @@
 //   curl -H 'X-Badge-Simulator: 1' -d '{"label":"title"}' localhost:8765/ctl/screenshot
 //   curl -H 'X-Badge-Simulator: 1' -d '{"code":"game.score"}' localhost:8765/ctl/exec
 //   curl localhost:8765/ctl/status
+// Buttons: up, down, left, right, select (physical), pad_up, pad_down, pad_left,
+// pad_right, pad_select (touch pad), back, menu, home; combine with "+".
 import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, watch, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -46,7 +48,10 @@ const mime = {
     ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".wasm": "application/wasm",
     ".glb": "model/gltf-binary", ".png": "image/png", ".txt": "text/plain; charset=utf-8",
 };
-const buttonBits = { down: 1, up: 2, select: 4, right: 8, left: 16, home: 32, back: 8192, menu: 16384 };
+const buttonBits = {
+    down: 1, up: 2, select: 4, right: 8, left: 16, home: 32, back: 8192, menu: 16384,
+    pad_left: 256, pad_right: 512, pad_select: 1024, pad_up: 2048, pad_down: 4096,
+};
 const ignored = (name) => name === "__pycache__" || name.endsWith(".pyc") || name.startsWith(".");
 
 const clients = new Set();

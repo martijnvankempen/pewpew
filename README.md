@@ -11,44 +11,76 @@ Shoot all 15 aliens to clear a wave, then survive the next, faster one.
 Every third wave is a boss fight. The game ends when you have lost all three
 lives or the fleet reaches Pew.
 
-### Controls
+### The badge's controls
 
-| Badge button | Simulator key | Title screen | Playing | Paused | Game over | Name entry |
+Hold the badge as it hangs on the lanyard: the purple touch card on top and
+the screen below it.
+
+- **Touch pad** (purple card): a d-pad on the right; on the left a big round
+  SELECT pad and a smaller round BACK pad; in the middle two small pills,
+  MENU and HOME.
+- **Buttons**: LEFT, RIGHT and SELECT under the screen; UP and DOWN on the
+  right edge.
+
+| Control | Simulator key | Title screen | How to play | Playing | Paused | Name entry |
 | --- | --- | --- | --- | --- | --- | --- |
-| LEFT / RIGHT | Arrow keys, or A / D | | Move Pew | | | Previous / next letter |
-| SELECT | Space or Enter, or J | Start | Fire (hold for auto-fire) | Resume | Play again, or enter your name | Next letter; on the last one, save |
-| UP | Arrow Up, or W | | Octo-burst (when charged) | | | Change letter |
-| DOWN | Arrow Down, or S | Tilt-to-steer on/off | | | | Change letter |
-| BACK | K | | Pause | Quit to title | Back to title, or enter your name | Previous letter |
-| MENU | U | | Pause | | | |
-| HOME | Esc | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu |
+| Touch d-pad | W / A / S / D | DOWN: tilt-to-steer on/off | | Fly around, up and down too | | Change / move letter |
+| LEFT / RIGHT buttons | Arrow Left / Right | | | Move left / right | | Previous / next letter |
+| SELECT (button or big touch pad) | Space or Enter, or J | Start | Play now | Fire (hold for auto-fire) | Resume | Next letter; on the last one, save |
+| UP / DOWN buttons (right edge) | Arrow Up / Down | DOWN: tilt-to-steer on/off | | Octo-burst (when charged) | | Change letter |
+| BACK (small touch pad) | K | | Back to title | Pause | Quit to title | Previous letter |
+| MENU (touch pill) | U | | | Pause | | |
+| HOME (touch pill) | Esc | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu |
 
-The badge's touch pad and physical buttons do the same thing, and the
-controls follow the screen when you hold the badge upside down. On the game
-over screen, SELECT and BACK work after a short pause (0.9 s) so you don't
-skip it by accident.
+The controls follow the screen when you hold the badge upside down. No button
+does anything during the ad.
+
+You don't need to know the button names: whenever the game wants SELECT
+("PRESS TO PLAY", "RESUME", "NEXT"), a bouncing arrow at the bottom edge of
+the screen points straight down at the SELECT button under it. When the
+Octo-burst is ready, and on the name entry, arrows at the right edge point at
+the two side buttons. Held upside down, the arrows point up and left instead.
+
+### How to play card
+
+Pressing SELECT on the title shows a HOW TO PLAY card before the game starts:
+a drawing of the badge in the middle with labelled arrows pointing at each
+control (FIRE, MOVE, PAUSE, BURST), colour-coded like the controls themselves
+(cyan moves, gold fires, pink is the Octo-burst, lilac pauses). One arrow at a
+time turns white and its control gets a blinking frame. It stays up until you press SELECT, so read it at
+your own pace; BACK goes back to the title instead.
 
 ### Attract mode
 
 Leave the title screen alone for 9 seconds and the badge plays itself: an
 autopilot flies Pew through the waves for up to 30 seconds, then the Hall of
-Fame is shown and it goes back to the title. The case LEDs breathe slowly
-meanwhile. SELECT starts a real game straight from the demo or the Hall of
-Fame; any other button goes to the title.
+Fame and the HOW TO PLAY card are shown and it goes back to the title. The
+case LEDs breathe slowly meanwhile. SELECT starts a real game from the demo,
+the Hall of Fame or the card; any other button goes to the title.
+
+### Moving
+
+- The LEFT and RIGHT buttons move Pew sideways along the bottom.
+- The touch d-pad moves Pew in eight directions: besides left and right it
+  can lift Pew about a quarter of the screen up to dodge shots and divers,
+  but never into the alien fleet. Diagonals are as fast as straight moves.
+- Tilt-to-steer (below) adds to the sideways movement.
 
 ### Shooting
 
-- Pew fires from the left and right finger-guns in turn. Hold SELECT for
-  auto-fire, about four shots a second.
+- Pew fires from the left and right finger-guns in turn. Hold SELECT (the
+  button or the big touch pad) for auto-fire, about four shots a second.
 - Up to four stars can be on screen at once.
 - Stars also destroy alien shots they touch.
 
 ### Octo-burst
 
 - Every alien you hit adds one charge. Ten hits fill the bar along the bottom
-  edge of the screen; it turns pink and "UP: BURST!" flashes at the top.
-- Press UP to fire seven stars at once in a wide fan. Burst stars don't count
-  towards the four-star limit.
+  edge of the screen; it turns pink, "BURST!" flashes at the top and arrows
+  point at the two buttons on the right edge.
+- Press either button on the right edge (UP or DOWN) to fire seven stars at
+  once in a wide fan. Up on the touch pad moves Pew instead. Burst stars
+  don't count towards the four-star limit.
 - The charge carries over between waves, and resets when you use it.
 
 ### Scoring
@@ -75,9 +107,20 @@ life, resets the combo (Octo-burst stars that miss don't count).
 
 The five best scores are kept on the badge with three-letter initials. It
 starts with made-up scores to beat, arcade style. When your score makes
-the table, the game over screen leads to the name entry, which remembers the
+the table, the name entry follows the ad, and it remembers the
 last initials you used. The Hall of Fame is saved straight away and shown with your
 new row highlighted.
+
+### The ad
+
+When you lose, a 6-second sponsor ad plays and no button can skip it. A red
+forklift reverses in on a spinning sunburst with "GET YOURSELF FORKLIFT
+CERTIFIED!", a five-star rating and "SPONSORED BY CoE". The top bar shows
+GAME OVER and your
+final score; the bottom bar counts down and fills up, and the case LEDs pulse
+like a forklift's warning beacon. After the ad you go to the name entry if
+your score made the Hall of Fame, otherwise back to the title screen. The
+self-playing demo never shows the ad.
 
 ### The alien fleet
 
@@ -149,7 +192,7 @@ keep working while tilt is on.
 ### Saved on the badge
 
 The Hall of Fame, your last initials, the best score and the tilt setting are
-kept between games and after a reset. Scores are only saved at game over:
+kept between games and after a reset. Scores are only saved when you lose:
 quitting to the title from the pause screen, or pressing HOME, doesn't save
 them.
 
@@ -157,14 +200,14 @@ them.
 
 | Path | What |
 | --- | --- |
-| `badge/apps/pewpew/__init__.py` | App setup, screens (title, attract demo, play, pause, game over, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
+| `badge/apps/pewpew/__init__.py` | App setup, screens (title, how to play, attract demo, play, pause, game-over ad, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
 | `badge/apps/pewpew/pew.py` | Pew: movement, alternating shots, Octo-burst, lives |
 | `badge/apps/pewpew/aliens.py` | The fleet: fly-in, march, pace changes, divers, zaps, hit tests |
 | `badge/apps/pewpew/boss.py` | The boss: entry, movement, fan/aimed/laser attacks, damage, death |
 | `badge/apps/pewpew/fx.py` | Nebula, planet and warping starfield, particles, shockwave rings, score popups, screen flash and shake, case LEDs |
-| `badge/apps/pewpew/controls.py` | Buttons plus optional tilt-to-steer |
+| `badge/apps/pewpew/controls.py` | Steering from the buttons, the touch pad (8 directions) and optional tilt |
 | `badge/apps/pewpew/assets/`, `icon.png` | Generated images |
-| `tools/make_assets.py` | Builds the images from `pew.png` (needs Pillow) |
+| `tools/make_assets.py` | Builds the images from `pew.png`, and the ad's forklift from `forklift.jpg` (needs Pillow) |
 | `tools/simulate.mjs` | Runs the app in the badge simulator in a browser (needs Node and a badger/home clone) |
 
 The app uses the 2026 runtime globals (`badge`, `screen`, `image`, ...), not
@@ -179,6 +222,11 @@ python3 -m venv ~/.venvs/pewpew && ~/.venvs/pewpew/bin/pip install pillow
 
 The script prints the finger-tip positions in the player sprite; keep
 `MUZZLES` in `pew.py` in sync if the sprite changes.
+
+The forklift photo `forklift.jpg` isn't in git. Put it in the repository root
+to rebuild `assets/forklift.png`: the script removes the background, paints
+over the brand lettering and the side sticker (`BRAND_BOXES`) and turns the
+orange paint red. Without the photo it keeps the committed `forklift.png`.
 
 ## Check and run
 
