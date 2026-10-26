@@ -5,6 +5,27 @@
 `pew.png`, fires spinning stars from alternating finger-guns at an alien
 fleet that marches, wobbles and swoops down at you.
 
+## What it looks like
+
+These are captures from the badge simulator (`tools/simulate.mjs`). The
+badge's 160x120 screen is shown at 2x in the animation and 3x in the stills.
+
+<p align="center">
+  <img src="docs/screenshots/gameplay.gif" alt="Animated gameplay: Pew fires stars at the alien fleet, dodges divers and sets off an Octo-burst" width="480">
+  <img src="docs/screenshots/badge.png" alt="Pew Pew! running on the GitHub Universe 2026 badge in the simulator, purple touch card on top" height="360">
+</p>
+
+| | | |
+| :---: | :---: | :---: |
+| ![Title screen with the PEW PEW! logo and a PRESS TO PLAY arrow](docs/screenshots/title.png) | ![HOW TO PLAY card: the badge with arrows to each control](docs/screenshots/how-to-play.png) | ![Wave 1: Pew under the alien fleet](docs/screenshots/gameplay.png) |
+| **Title**: the arrow points at the real SELECT button | **How to play**: arrows to every control | **Wave 1**: the fleet bobs and changes pace |
+| ![Two aliens diving at Pew](docs/screenshots/divers.png) | ![Octo-burst: a fan of pink stars](docs/screenshots/octo-burst.png) | ![WAVE CLEAR and PERFECT!](docs/screenshots/wave-clear.png) |
+| **Divers** swoop down at Pew | **Octo-burst**: seven stars at once | **Wave clear**, with a PERFECT bonus |
+| ![Boss WARNING: MERGE CONFLICT](docs/screenshots/boss-warning.png) | ![Boss fight with a health bar](docs/screenshots/boss.png) | ![The forklift sponsor ad](docs/screenshots/ad.png) |
+| **Boss warning** every third wave | **Boss fight** with its health bar | **Game over**: the 6-second sponsor ad |
+| ![Name entry for a top-5 score](docs/screenshots/name-entry.png) | ![Hall of Fame](docs/screenshots/hall-of-fame.png) | |
+| **Name entry** for a top-5 score | **Hall of Fame** | |
+
 ## How to play
 
 Shoot all 15 aliens to clear a wave, then survive the next, faster one.
@@ -209,6 +230,7 @@ them.
 | `badge/apps/pewpew/assets/`, `icon.png` | Generated images |
 | `tools/make_assets.py` | Builds the images from `pew.png`, and the ad's forklift from `forklift.jpg` (needs Pillow) |
 | `tools/simulate.mjs` | Runs the app in the badge simulator in a browser (needs Node and a badger/home clone) |
+| `docs/screenshots/` | The README's screenshots and animation, captured in the simulator |
 
 The app uses the 2026 runtime globals (`badge`, `screen`, `image`, ...), not
 the 2025 `badgeware` API.
