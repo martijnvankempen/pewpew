@@ -4,7 +4,8 @@ import random
 W = screen.width
 H = screen.height
 
-SHEET = image.load("assets/aliens.png").spritesheet(2, 3)
+SHEET = image.load("assets/aliens.png").spritesheet(3, 3)
+FLASH_FRAME = 2
 ALIEN_W = 11
 ALIEN_H = 8
 COLS = 5
@@ -12,12 +13,13 @@ ROWS = 3
 STEP_X = 20
 STEP_Y = 13
 FLEET_W = (COLS - 1) * STEP_X + ALIEN_W
-TOP = 14
+TOP = 16
 MARGIN = 2
 BOB = 2.5
 
 POINTS = (30, 20, 10)
-PENS = (color.rgb(255, 92, 205), color.rgb(80, 220, 255), color.rgb(160, 255, 90))
+RGBS = ((255, 92, 205), (80, 220, 255), (160, 255, 90))
+PENS = tuple(color.rgb(*rgb) for rgb in RGBS)
 ZAP_PEN = color.rgb(255, 120, 60)
 ZAP_CORE = color.rgb(255, 235, 150)
 
@@ -32,6 +34,7 @@ WINDUP = 0.35
 DIVE_SPEED = 30
 DIVE_ACCEL = 50
 RETURN_SPEED = 40
+ENTRY_S = 1.2
 
 EMPTY = 0
 HOME = 1
@@ -72,6 +75,13 @@ class Fleet:
         self.divers = []
         self.next_zap = now + 1200
         self.next_dive = now + 1500 + self.dive_gap()
+        self.entry = 0.0
+
+    def settle(self, dt):
+        """Advance the fly-in and the idle bob; runs even while the fleet holds still."""
+        if self.entry < ENTRY_S:
+            self.entry = min(ENTRY_S, self.entry + dt)
+            self.t += dt
 
     def speed(self):
         killed = 1 - self.count / (ROWS * COLS)
@@ -82,7 +92,16 @@ class Fleet:
 
     def slot_pos(self, r, c):
         bob = math.sin(self.t * 3 + c * 0.9 + r * 1.7) * BOB
-        return self.x + c * STEP_X, self.y + r * STEP_Y + bob
+        x = self.x + c * STEP_X
+        y = self.y + r * STEP_Y + bob
+        if self.entry < ENTRY_S:
+            # Fly in from above on a curve, the back row first, one column after another.
+            k = max(0.0, min(1.0, self.entry / ENTRY_S * 1.9 - (ROWS - 1 - r) * 0.2 - c * 0.1))
+            left = 1 - k
+            ease = left * left * left
+            x += math.sin(left * 4) * 50 * (1 if c % 2 else -1) * left
+            y -= ease * 120
+        return x, y
 
     def occupied_columns(self):
         return [c for c in range(COLS) if any(self.slots[r][c] for r in range(ROWS))]
@@ -242,7 +261,7 @@ class Fleet:
         return False
 
     def draw(self, now, ox, oy):
-        frame = int(self.travel / 4) % 2
+        frame = int(self.travel / 4 + self.entry * 6) % 2
         for r in range(ROWS):
             sprite = SHEET.sprite(frame, r)
             for c in range(COLS):
@@ -254,6 +273,9 @@ class Fleet:
         for d in self.divers:
             screen.blit(SHEET.sprite(flap, d.r), vec2(int(d.x + ox), int(d.y + oy)))
 
+        self.draw_zaps(now, ox, oy)
+
+    def draw_zaps(self, now, ox, oy):
         wiggle = (now // 90) % 2
         for z in self.zaps:
             x = int(z[0] + ox)
@@ -264,3 +286,7 @@ class Fleet:
             screen.rectangle(x + wiggle, y + 5, 2, 2)
             screen.pen = ZAP_CORE
             screen.rectangle(x + wiggle, y + 6, 2, 1)
+
+
+def draw_flash(row, x, y):
+    screen.blit(SHEET.sprite(FLASH_FRAME, row), vec2(int(x), int(y)))

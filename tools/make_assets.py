@@ -3,6 +3,9 @@
 
 from pathlib import Path
 
+import math
+import random
+
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -203,16 +206,170 @@ def make_player(src, cx, cy, r):
 
 
 def make_aliens():
-    sheet = Image.new("RGBA", (11 * 2, 8 * len(ALIENS)), (0, 0, 0, 0))
+    """Two animation frames per alien, plus a white silhouette for the hit flash."""
+    sheet = Image.new("RGBA", (11 * 3, 8 * len(ALIENS)), (0, 0, 0, 0))
     sp = sheet.load()
     for row, (body, *frames) in enumerate(ALIENS):
-        for col, frame in enumerate(frames):
+        for col, frame in enumerate(frames + [frames[0]]):
             for y, line in enumerate(frame):
                 for x, ch in enumerate(line):
                     color = {"#": body, "o": EYE, "x": PUPIL}.get(ch)
                     if color:
-                        sp[col * 11 + x, row * 8 + y] = color + (255,)
+                        sp[col * 11 + x, row * 8 + y] = (EYE if col == 2 else color) + (255,)
     return sheet
+
+
+BOSS_SIZE = (40, 28)
+BOSS_BODY = (150, 80, 255)
+BOSS_SHADE = (95, 45, 185)
+BOSS_LIGHT = (205, 165, 255)
+BOSS_RIM = (60, 30, 120)
+BOSS_LAMP = (255, 228, 90)
+BOSS_LINE = (22, 10, 44)
+
+
+def make_boss_frame(frame, flash=False):
+    """The mothership: a three-eyed dome on a lit rim, with six wavy tentacles."""
+    w, h = BOSS_SIZE
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = img.load()
+
+    def put(x, y, c):
+        if 0 <= x < w and 0 <= y < h:
+            px[x, y] = c + (255,)
+
+    for y in range(h):
+        for x in range(w):
+            # Tentacles under the rim.
+            if 16 <= y <= 26:
+                for i, base in enumerate((7, 12, 17, 22, 27, 32)):
+                    sway = math.sin(y * 0.7 + i * 1.3 + frame * math.pi) * 1.6 * (y - 15) / 10
+                    width = 1.6 if y < 23 else 0.9
+                    if abs(x + 0.5 - (base + sway)) < width:
+                        put(x, y, BOSS_SHADE if y < 22 else BOSS_RIM)
+            # Dome.
+            dx, dy = (x + 0.5 - 20) / 17.5, (y + 0.5 - 12) / 11
+            if dx * dx + dy * dy <= 1 and y <= 14:
+                shade = BOSS_SHADE if dy > 0.35 or dx > 0.55 else BOSS_BODY
+                hx, hy = (x + 0.5 - 12) / 5, (y + 0.5 - 5) / 2
+                put(x, y, BOSS_LIGHT if hx * hx + hy * hy <= 1 else shade)
+            # Rim with running lights.
+            if 14 <= y <= 17 and 2 <= x <= 37:
+                lamp = y in (15, 16) and x % 4 == (0 if frame == 0 else 2) and 4 <= x <= 35
+                put(x, y, BOSS_LAMP if lamp else BOSS_RIM)
+
+    def eye(cx, cy, r, look):
+        for y in range(h):
+            for x in range(w):
+                d = (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2
+                if d <= r * r:
+                    put(x, y, EYE)
+                if (x + 0.5 - cx - look) ** 2 + (y + 0.5 - cy - 0.5) ** 2 <= (r * 0.5) ** 2:
+                    put(x, y, PUPIL)
+
+    look = -1 if frame == 0 else 1
+    eye(20, 8.5, 4.2, look)
+    eye(10.5, 10, 2.4, look * 0.6)
+    eye(29.5, 10, 2.4, look * 0.6)
+
+    filled = {(x, y) for y in range(h) for x in range(w) if px[x, y][3]}
+    for y in range(h):
+        for x in range(w):
+            if (x, y) not in filled and any((x + dx, y + dy) in filled
+                                            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                put(x, y, BOSS_LINE)
+    if flash:
+        for x, y in filled:
+            put(x, y, EYE)
+    return img
+
+
+def make_boss():
+    w, h = BOSS_SIZE
+    sheet = Image.new("RGBA", (w * 3, h), (0, 0, 0, 0))
+    sheet.paste(make_boss_frame(0), (0, 0))
+    sheet.paste(make_boss_frame(1), (w, 0))
+    sheet.paste(make_boss_frame(0, flash=True), (w * 2, 0))
+    return sheet
+
+
+def periodic_noise(w, h, cells_x, cells_y, rng):
+    """Smooth value noise that tiles in both directions."""
+    grid = [[rng.random() for _ in range(cells_x)] for _ in range(cells_y)]
+    out = []
+    for y in range(h):
+        fy = y / h * cells_y
+        y0 = int(fy)
+        ty = fy - y0
+        ty = ty * ty * (3 - 2 * ty)
+        row = []
+        for x in range(w):
+            fx = x / w * cells_x
+            x0 = int(fx)
+            tx = fx - x0
+            tx = tx * tx * (3 - 2 * tx)
+            a = grid[y0 % cells_y][x0 % cells_x]
+            b = grid[y0 % cells_y][(x0 + 1) % cells_x]
+            c = grid[(y0 + 1) % cells_y][x0 % cells_x]
+            d = grid[(y0 + 1) % cells_y][(x0 + 1) % cells_x]
+            row.append((a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty)
+        out.append(row)
+    return out
+
+
+def fractal(w, h, rng):
+    layers = [(periodic_noise(w, h, 4 * k, 3 * k, rng), 1 / k) for k in (1, 2, 4, 8)]
+    total = sum(weight for _, weight in layers)
+    return [[sum(n[y][x] * weight for n, weight in layers) / total for x in range(w)] for y in range(h)]
+
+
+def make_nebula(w=160, h=120):
+    """Dark, vertically tiling space clouds that sit behind everything."""
+    rng = random.Random(2026)
+    purple = fractal(w, h, rng)
+    teal = fractal(w, h, rng)
+    base = (7, 10, 18)
+    img = Image.new("RGB", (w, h))
+    px = img.load()
+    for y in range(h):
+        for x in range(w):
+            p = max(0.0, (purple[y][x] - 0.45) / 0.3)
+            t = max(0.0, (teal[y][x] - 0.5) / 0.3)
+            core = max(0.0, p - 0.75) * 2
+            r = base[0] + 58 * min(p, 1) + 60 * min(core, 1)
+            g = base[1] + 14 * min(p, 1) + 40 * min(t, 1)
+            b = base[2] + 70 * min(p, 1) + 52 * min(t, 1) + 40 * min(core, 1)
+            px[x, y] = (min(255, int(r)), min(255, int(g)), min(255, int(b)))
+    return img.quantize(64, dither=Image.Dither.NONE)
+
+
+def make_planet(size=26):
+    """A ringed planet lit from the top left, supersampled for soft edges."""
+    k = 4
+    big = Image.new("RGBA", (size * k, size * k), (0, 0, 0, 0))
+    px = big.load()
+    c = size * k / 2
+    r = 8 * k
+    ring_pen = (255, 140, 215)
+
+    def ring(x, y):
+        rx, ry = (x - c) * math.cos(0.35) + (y - c) * math.sin(0.35), -(x - c) * math.sin(0.35) + (y - c) * math.cos(0.35)
+        d = (rx / (12.5 * k)) ** 2 + (ry / (3.2 * k)) ** 2
+        return 0.72 <= d <= 1.0, ry
+
+    for y in range(size * k):
+        for x in range(size * k):
+            on_ring, ry = ring(x, y)
+            dx, dy = x - c, y - c
+            inside = dx * dx + dy * dy <= r * r
+            if inside and not (on_ring and ry > 0):
+                light = max(0.0, 1 - math.hypot(dx + 0.45 * r, dy + 0.45 * r) / (1.9 * r))
+                band = 0.12 * math.sin(dy / k * 1.4)
+                px[x, y] = (int(30 + 120 * light), int(70 + 150 * light + 30 * band), int(110 + 130 * light + 30 * band), 255)
+            elif on_ring:
+                fade = 0.55 if ry < 0 and inside else 1.0
+                px[x, y] = tuple(int(v * fade) for v in ring_pen) + (230,)
+    return big.resize((size, size), Image.LANCZOS)
 
 
 def main():
@@ -228,6 +385,9 @@ def main():
     save(make_logo(src, cx, cy, ring_r, ICON_SIZE), APP / "icon.png")
     save(paletted(make_player(src, cx, cy, r)), ASSETS / "pew.png")
     save(paletted(make_aliens()), ASSETS / "aliens.png")
+    save(paletted(make_boss()), ASSETS / "boss.png")
+    save(make_nebula(), ASSETS / "nebula.png")
+    save(make_planet(), ASSETS / "planet.png")
 
 
 if __name__ == "__main__":

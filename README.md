@@ -7,25 +7,34 @@ fleet that marches, wobbles and swoops down at you.
 
 ## How to play
 
-Shoot all 15 aliens to clear a wave, then survive the next, faster one. The
-game ends when you have lost all three lives or the fleet reaches Pew.
+Shoot all 15 aliens to clear a wave, then survive the next, faster one.
+Every third wave is a boss fight. The game ends when you have lost all three
+lives or the fleet reaches Pew.
 
 ### Controls
 
-| Badge button | Simulator key | Title screen | Playing | Paused | Game over |
-| --- | --- | --- | --- | --- | --- |
-| LEFT / RIGHT | Arrow keys, or A / D | | Move Pew | | |
-| SELECT | Space or Enter, or J | Start | Fire (hold for auto-fire) | Resume | Play again |
-| UP | Arrow Up, or W | | Octo-burst (when charged) | | |
-| DOWN | Arrow Down, or S | Tilt-to-steer on/off | | | |
-| BACK | K | | Pause | Quit to title | Back to title |
-| MENU | U | | Pause | | |
-| HOME | Esc | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu |
+| Badge button | Simulator key | Title screen | Playing | Paused | Game over | Name entry |
+| --- | --- | --- | --- | --- | --- | --- |
+| LEFT / RIGHT | Arrow keys, or A / D | | Move Pew | | | Previous / next letter |
+| SELECT | Space or Enter, or J | Start | Fire (hold for auto-fire) | Resume | Play again, or enter your name | Next letter; on the last one, save |
+| UP | Arrow Up, or W | | Octo-burst (when charged) | | | Change letter |
+| DOWN | Arrow Down, or S | Tilt-to-steer on/off | | | | Change letter |
+| BACK | K | | Pause | Quit to title | Back to title, or enter your name | Previous letter |
+| MENU | U | | Pause | | | |
+| HOME | Esc | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu |
 
 The badge's touch pad and physical buttons do the same thing, and the
 controls follow the screen when you hold the badge upside down. On the game
-over screen, SELECT and BACK work after a short pause (0.8 s) so you don't
+over screen, SELECT and BACK work after a short pause (0.9 s) so you don't
 skip it by accident.
+
+### Attract mode
+
+Leave the title screen alone for 9 seconds and the badge plays itself: an
+autopilot flies Pew through the waves for up to 30 seconds, then the Hall of
+Fame is shown and it goes back to the title. The case LEDs breathe slowly
+meanwhile. SELECT starts a real game straight from the demo or the Hall of
+Fame; any other button goes to the title.
 
 ### Shooting
 
@@ -50,8 +59,25 @@ skip it by accident.
 | Cyan, horned | Middle | 20 | 40 |
 | Green jelly | Bottom | 10 | 20 |
 
-Clearing a wave is worth 100 points. Your best score is shown on the title
-screen and in the top bar.
+Clearing a wave is worth 100 points, plus 500 for a PERFECT wave (no lives
+lost). Every star that hits the boss is worth 10, and destroying it is worth
+1000 per boss you have beaten so far (1000, 2000, ...). Your best score is shown on the title screen
+and in the top bar.
+
+### Combo
+
+Every hit in a row raises the combo. At 5, 10, 20 and 30 hits all points are
+multiplied by 2, 3, 4 and 5; the multiplier shows next to your score. An
+aimed star that flies off the top without hitting anything, or losing a
+life, resets the combo (Octo-burst stars that miss don't count).
+
+### Hall of Fame
+
+The five best scores are kept on the badge with three-letter initials. It
+starts with made-up scores to beat, arcade style. When your score makes
+the table, the game over screen leads to the name entry, which remembers the
+last initials you used. The Hall of Fame is saved straight away and shown with your
+new row highlighted.
 
 ### The alien fleet
 
@@ -75,16 +101,30 @@ screen and in the top bar.
   returns to its place in the fleet.
 - Shooting a diver is worth double points.
 
+### Boss waves
+
+- Waves 3, 6, 9, ... are boss fights. A red WARNING with hazard stripes
+  and the boss's name comes first, and the case LEDs flash red.
+- The mothership glides from side to side and has a health bar under the top
+  bar. It gets tougher with every boss.
+- It takes turns between a fan of shots, a volley of aimed shots and a laser:
+  a thin flickering line warns you where the beam will hit, then a wide beam
+  fires straight down. Below half health it attacks more often and fires
+  bigger volleys.
+- Destroying it sets off a chain of explosions before the next wave.
+
 ### Lives
 
 - You start with three lives, shown as small Pews at the top right.
-- Getting hit removes any alien shots on screen, and Pew blinks for 1.5 s
-  while nothing can hurt it.
+- Getting hit removes any alien shots on screen, and Pew blinks inside a
+  shield bubble for 1.5 s while nothing can hurt it.
 
 ### Waves
 
-Each wave starts with a "WAVE n" banner. The fleet holds still for about a
-second while you can already move and shoot. Every new wave:
+Each wave starts with a "WAVE n" banner while the aliens fly in to their
+places. The fleet holds still for about a second while you can already move
+and shoot. After a wave is cleared the stars stretch into a hyperspace jump,
+and the background changes colour. Every new wave:
 
 - marches faster (15% more per wave) and starts slightly lower;
 - fires more often and can have more shots on screen (up to four);
@@ -108,18 +148,20 @@ keep working while tilt is on.
 
 ### Saved on the badge
 
-The best score and the tilt setting are kept between games and after a
-reset. The best score is only saved at game over: quitting to the title
-from the pause screen, or pressing HOME, doesn't save it.
+The Hall of Fame, your last initials, the best score and the tilt setting are
+kept between games and after a reset. Scores are only saved at game over:
+quitting to the title from the pause screen, or pressing HOME, doesn't save
+them.
 
 ## Layout
 
 | Path | What |
 | --- | --- |
-| `badge/apps/pewpew/__init__.py` | App setup, screens (title, play, pause, game over), HUD, saved data |
+| `badge/apps/pewpew/__init__.py` | App setup, screens (title, attract demo, play, pause, game over, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
 | `badge/apps/pewpew/pew.py` | Pew: movement, alternating shots, Octo-burst, lives |
-| `badge/apps/pewpew/aliens.py` | The fleet: march, pace changes, divers, zaps, hit tests |
-| `badge/apps/pewpew/fx.py` | Starfield, particles, screen shake, case LEDs |
+| `badge/apps/pewpew/aliens.py` | The fleet: fly-in, march, pace changes, divers, zaps, hit tests |
+| `badge/apps/pewpew/boss.py` | The boss: entry, movement, fan/aimed/laser attacks, damage, death |
+| `badge/apps/pewpew/fx.py` | Nebula, planet and warping starfield, particles, shockwave rings, score popups, screen flash and shake, case LEDs |
 | `badge/apps/pewpew/controls.py` | Buttons plus optional tilt-to-steer |
 | `badge/apps/pewpew/assets/`, `icon.png` | Generated images |
 | `tools/make_assets.py` | Builds the images from `pew.png` (needs Pillow) |
