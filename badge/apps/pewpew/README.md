@@ -15,8 +15,8 @@ Pew the cat-octopus fires spinning stars at a marching alien fleet.
 | HOME | Back to the badge menu |
 
 Pressing SELECT on the title first shows a HOW TO PLAY card: a drawing of
-the badge with each control colour-coded. SELECT starts right away, otherwise
-the game starts after 7 seconds.
+the badge with each control colour-coded. It stays up until you press SELECT
+again to play.
 
 Pew fires from alternating finger-guns, up to four stars at a time. Every
 alien hit charges the Octo-burst; ten hits fill the bar along the bottom of

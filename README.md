@@ -40,9 +40,8 @@ does anything during the ad.
 Pressing SELECT on the title shows a HOW TO PLAY card before the game starts:
 a drawing of the badge with every control colour-coded (cyan moves, gold
 fires, pink is the Octo-burst, lilac pauses) next to a legend, with one
-control framed at a time. Press SELECT to play straight away, or wait: the
-game starts by itself when the bar along the bottom runs out (7 s). BACK goes
-back to the title.
+control framed at a time. It stays up until you press SELECT, so read it at
+your own pace; BACK goes back to the title instead.
 
 ### Attract mode
 

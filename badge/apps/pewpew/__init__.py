@@ -357,7 +357,7 @@ class Game:
         self.set_state(Game.SCORES, now)
 
     def show_help(self, now, attract=False):
-        """The controls card; it starts a game unless it is part of the attract loop."""
+        """The controls card: it waits for SELECT, and only times out in the attract loop."""
         self.demo = False
         self.help_attract = attract
         self.space.warp_target = 0.0
@@ -565,11 +565,8 @@ class Game:
                 self.start()
             elif badge.pressed(BUTTON_BACK) or (self.help_attract and self.any_pressed()):
                 self.go_title(now)
-            elif t > HELP_MS:
-                if self.help_attract:
-                    self.go_title(now)
-                else:
-                    self.start()
+            elif self.help_attract and t > HELP_MS:
+                self.go_title(now)
         elif self.state == Game.PLAY:
             if self.demo:
                 if badge.pressed(BUTTON_SELECT):
@@ -1148,10 +1145,6 @@ class Game:
         width, _ = screen.measure_text(prompt)
         if (now // 400) % 2 or t < HELP_GUARD_MS:
             shadow_text(prompt, x + (W - x - width) / 2, 104, GOLD)
-        if not self.help_attract:
-            # The game starts by itself when this runs out.
-            screen.pen = GOLD
-            screen.rectangle(x, 117, int((W - 2 - x) * max(0.0, 1 - t / HELP_MS)), 2)
 
     def draw_ad(self, now):
         t = now - self.state_at
