@@ -38,9 +38,10 @@ does anything during the ad.
 ### How to play card
 
 Pressing SELECT on the title shows a HOW TO PLAY card before the game starts:
-a drawing of the badge with every control colour-coded (cyan moves, gold
-fires, pink is the Octo-burst, lilac pauses) next to a legend, with one
-control framed at a time. It stays up until you press SELECT, so read it at
+a drawing of the badge in the middle with labelled arrows pointing at each
+control (FIRE, MOVE, PAUSE, BURST), colour-coded like the controls themselves
+(cyan moves, gold fires, pink is the Octo-burst, lilac pauses). One arrow at a
+time turns white and its control gets a blinking frame. It stays up until you press SELECT, so read it at
 your own pace; BACK goes back to the title instead.
 
 ### Attract mode

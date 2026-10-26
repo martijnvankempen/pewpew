@@ -265,15 +265,28 @@ def key(x, y, w, h, pen):
     screen.shape(shape.rounded_rectangle(x, y, w, h, 1))
 
 
-# HOW TO PLAY rows: (text y, label, colour, outline around the control in the badge drawing).
-HELP_ROWS = (
-    (17, "FLY AROUND", CYAN, (43, 33, 15, 15)),
-    (29, "FIRE (HOLD)", GOLD, (17, 32, 13, 13)),
-    (41, "PAUSE", PAUSE_PEN, (10, 39, 25, 10)),
-    (68, "MOVE", CYAN, (14, 93, 25, 10)),
-    (80, "FIRE (HOLD)", GOLD, (42, 93, 11, 10)),
-    (92, "OCTO-BURST", PINK, (58, 60, 7, 26)),
+def arrow(x1, y1, x2, y2, pen):
+    screen.pen = pen
+    screen.line(int(x1), int(y1), int(x2), int(y2))
+    dx, dy = x2 - x1, y2 - y1
+    d = math.sqrt(dx * dx + dy * dy) or 1.0
+    ux, uy = dx / d, dy / d
+    bx, by = x2 - ux * 4, y2 - uy * 4
+    screen.triangle(vec2(x2, y2), vec2(bx - uy * 2.5, by + ux * 2.5), vec2(bx + uy * 2.5, by - ux * 2.5))
+
+
+# HOW TO PLAY callouts around the badge drawing:
+# (label, colour, side: -1 left / 1 right, text y, arrow tip, frame around the control).
+HELP_CALLOUTS = (
+    ("FIRE", GOLD, -1, 26, (63, 37), (63, 32, 13, 13)),
+    ("MOVE", CYAN, 1, 33, (103, 40), (89, 33, 15, 15)),
+    ("PAUSE", PAUSE_PEN, -1, 42, (57, 46), (56, 39, 11, 11)),
+    ("BURST", PINK, 1, 63, (110, 70), (104, 58, 7, 24)),
+    ("MOVE", CYAN, -1, 84, (61, 93), (60, 88, 25, 10)),
+    ("FIRE", GOLD, 1, 86, (98, 93), (88, 88, 11, 10)),
 )
+HELP_LEFT = 46
+HELP_RIGHT = 121
 
 
 class Game:
@@ -1088,63 +1101,63 @@ class Game:
 
     def draw_help(self, now):
         t = now - self.state_at
-        focus = (now // 900) % len(HELP_ROWS)
+        focus = (now // 900) % len(HELP_CALLOUTS)
         screen.pen = PANEL
         screen.rectangle(0, 0, W, H)
 
         # The badge as it hangs on the lanyard: purple touch card on top, screen below.
         screen.pen = CARD
-        screen.shape(shape.rounded_rectangle(8, 6, 52, 44, 4))
+        screen.shape(shape.rounded_rectangle(54, 6, 52, 44, 4))
         screen.pen = CARD_PRINT
-        screen.shape(shape.rounded_rectangle(11, 9, 46, 21, 3))
-        dpad(50, 40, 12, CYAN)
+        screen.shape(shape.rounded_rectangle(57, 9, 46, 21, 3))
+        dpad(96, 40, 12, CYAN)
         screen.pen = GOLD
-        screen.circle(vec2(23, 38), 4.5)
+        screen.circle(vec2(69, 38), 4.5)
         screen.pen = PAUSE_PEN
-        screen.circle(vec2(15, 44), 3.5)
-        key(28, 42, 5, 3, PAUSE_PEN)
-        key(35, 42, 5, 3, HOME_PEN)
+        screen.circle(vec2(61, 44), 3.5)
+        key(74, 42, 5, 3, PAUSE_PEN)
+        key(81, 42, 5, 3, HOME_PEN)
 
         screen.pen = BODY
-        screen.shape(shape.rounded_rectangle(8, 52, 52, 58, 6))
+        screen.shape(shape.rounded_rectangle(54, 52, 52, 54, 6))
         screen.pen = BEZEL
-        screen.rectangle(13, 56, 42, 32)
+        screen.rectangle(59, 56, 42, 28)
         screen.pen = BLACK
-        screen.rectangle(15, 58, 38, 28)
-        screen.blit(SPRITE, rect(27, 68 + int(math.sin(now / 250)), 14, 12))
-        key(16, 95, 7, 6, CYAN)
-        key(30, 95, 7, 6, CYAN)
-        key(44, 95, 7, 6, GOLD)
-        key(60, 62, 3, 8, PINK)
-        key(60, 76, 3, 8, PINK)
+        screen.rectangle(61, 58, 38, 24)
+        screen.blit(SPRITE, rect(73, 64 + int(math.sin(now / 250)), 14, 12))
+        key(62, 90, 7, 6, CYAN)
+        key(76, 90, 7, 6, CYAN)
+        key(90, 90, 7, 6, GOLD)
+        key(106, 60, 3, 8, PINK)
+        key(106, 72, 3, 8, PINK)
 
-        # Legend, colour-coded to the drawing; one control at a time gets a blinking frame.
-        x = 67
         screen.font = SMALL
-        shadow_text("TOUCH PAD", x, 5, DIM)
-        shadow_text("BUTTONS", x, 56, DIM)
-        dpad(x + 5, 24, 9, CYAN)
-        screen.pen = GOLD
-        screen.circle(vec2(x + 5, 36), 4)
-        screen.pen = PAUSE_PEN
-        screen.circle(vec2(x + 3, 48), 2.5)
-        key(x + 7, 47, 4, 3, PAUSE_PEN)
-        key(x, 72, 4, 6, CYAN)
-        key(x + 6, 72, 4, 6, CYAN)
-        key(x + 2, 84, 6, 6, GOLD)
-        key(x + 2, 95, 2, 7, PINK)
-        key(x + 6, 95, 2, 7, PINK)
-        for i, (y, text, pen, box) in enumerate(HELP_ROWS):
-            shadow_text(text, x + 12, y, WHITE if i == focus else pen)
+        shadow_text("HOW TO", 4, 2, WHITE)
+        shadow_text("PLAY", 4, 12, WHITE)
+
+        # Labelled arrows to each control; one at a time turns white and gets a blinking frame.
+        for i, (text, pen, side, y, tip, box) in enumerate(HELP_CALLOUTS):
+            width, _ = screen.measure_text(text)
+            cy = y + 7
+            if side < 0:
+                tx, start = HELP_LEFT - width, HELP_LEFT + 2
+            else:
+                tx = min(HELP_RIGHT, W - 2 - width)
+                start = tx - 3
+            ink = WHITE if i == focus else pen
+            shadow_text(text, tx, y, ink)
+            nudge = math.sin(now / 120) * 1.5 if i == focus else 0
+            dx, dy = tip[0] - start, tip[1] - cy
+            d = math.sqrt(dx * dx + dy * dy) or 1.0
+            arrow(start, cy, tip[0] + dx / d * nudge, tip[1] + dy / d * nudge, ink)
         if (now // 300) % 2 == 0:
-            bx, by, bw, bh = HELP_ROWS[focus][3]
+            bx, by, bw, bh = HELP_CALLOUTS[focus][5]
             screen.pen = WHITE
             screen.shape(shape.rectangle(bx, by, bw, bh).stroke(1))
 
         prompt = "PRESS SELECT" if self.help_attract else "SELECT: PLAY!"
-        width, _ = screen.measure_text(prompt)
         if (now // 400) % 2 or t < HELP_GUARD_MS:
-            shadow_text(prompt, x + (W - x - width) / 2, 104, GOLD)
+            centre_text(prompt, 107, GOLD)
 
     def draw_ad(self, now):
         t = now - self.state_at
