@@ -6,19 +6,24 @@ Pew the cat-octopus fires spinning stars at a marching alien fleet.
 
 | Control | Action |
 | --- | --- |
-| LEFT / RIGHT | Move Pew |
-| SELECT | Fire a star (hold for auto-fire); start, resume |
-| UP | Octo-burst: a fan of seven stars, once the charge bar is full |
-| MENU or BACK | Pause; BACK again returns to the title |
+| LEFT / RIGHT buttons | Move Pew sideways |
+| Touch d-pad (purple card) | Fly around, including up and down |
+| SELECT (button or big touch pad) | Fire a star (hold for auto-fire); start, resume |
+| UP / DOWN buttons (right edge) | Octo-burst: a fan of seven stars, once the charge bar is full |
+| MENU or BACK (touch pad) | Pause; BACK again returns to the title |
 | DOWN (title screen) | Toggle tilt-to-steer |
 | HOME | Back to the badge menu |
+
+Pressing SELECT on the title first shows a HOW TO PLAY card: a drawing of
+the badge with each control colour-coded. SELECT starts right away, otherwise
+the game starts after 7 seconds.
 
 Pew fires from alternating finger-guns, up to four stars at a time. Every
 alien hit charges the Octo-burst; ten hits fill the bar along the bottom of
 the screen. Stars also cancel alien zaps. Clear all 15 aliens to start a
 faster wave; you lose when your three lives are gone or the fleet reaches Pew.
 
-Losing plays a 3-second sponsor ad that can't be skipped (get yourself
+Losing plays a 6-second sponsor ad that can't be skipped (get yourself
 forklift certified, sponsored by Pew), then the name entry for a top-five
 score or the title screen.
 

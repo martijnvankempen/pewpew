@@ -11,8 +11,11 @@ SPRITE_H = 24
 # Fingertip positions inside the sprite, printed by tools/make_assets.py.
 MUZZLES = ((2, 4), (25, 4))
 HITBOX = (5, 7, 18, 15)
+HOME_Y = H - SPRITE_H - 2
+# How far the touch pad can lift Pew off the ground.
+TOP_Y = HOME_Y - 32
 
-SPEED = 80
+SPEED = 90
 FIRE_MS = 220
 MAX_STARS = 4
 STAR_SPEED = 120
@@ -45,7 +48,7 @@ class Star:
 class Pew:
     def __init__(self):
         self.x = (W - SPRITE_W) / 2
-        self.y = H - SPRITE_H - 2
+        self.y = HOME_Y
         self.lives = LIVES
         self.charge = 0
         self.hand = 0
@@ -55,8 +58,9 @@ class Pew:
         self.hit_until = 0
         self.stars = []
 
-    def move(self, axis, dt):
-        self.x = max(0, min(W - SPRITE_W, self.x + axis * SPEED * dt))
+    def move(self, ax, ay, dt):
+        self.x = max(0, min(W - SPRITE_W, self.x + ax * SPEED * dt))
+        self.y = max(TOP_Y, min(HOME_Y, self.y + ay * SPEED * dt))
 
     def fire(self, now):
         if now < self.next_fire:

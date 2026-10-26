@@ -14,7 +14,7 @@ from aliens import ALIEN_H, ALIEN_W, PENS, POINTS, RGBS, SHEET, ZAP_PEN, Fleet, 
 from boss import BOSS_H, BOSS_W, RGB as BOSS_RGB, Boss
 from controls import Controls
 from fx import Flash, Glow, Particles, Popups, Rings, Shake, Starfield, draw_star
-from pew import CHARGE_FULL, SPRITE, SPRITE_W, STAR_RADIUS, Pew
+from pew import CHARGE_FULL, HOME_Y, SPRITE, SPRITE_W, STAR_RADIUS, Pew
 
 W = screen.width
 H = screen.height
@@ -46,6 +46,13 @@ INK = color.rgb(40, 22, 18)
 AD_YELLOW = color.rgb(255, 212, 55)
 AD_RAY = color.rgb(255, 188, 30)
 DUST = color.rgb(150, 120, 80)
+# Badge drawing on the HOW TO PLAY screen.
+CARD = color.rgb(108, 92, 231)
+CARD_PRINT = color.rgb(128, 112, 240)
+BODY = color.rgb(196, 186, 226)
+BEZEL = color.rgb(52, 50, 66)
+PAUSE_PEN = color.rgb(205, 195, 255)
+HOME_PEN = color.rgb(150, 140, 190)
 
 # Gradient styles for big text: (top, bottom, outline).
 GOLDEN = ((255, 250, 190), (255, 140, 30), (60, 20, 10))
@@ -55,8 +62,10 @@ ICE = ((225, 255, 255), (50, 140, 255), (10, 20, 60))
 
 MAX_FRAME_MS = 100
 BANNER_MS = 1300
-AD_MS = 3000
+AD_MS = 6000
 AD_DRIVE_MS = 600
+HELP_MS = 7000
+HELP_GUARD_MS = 300
 CLEAR_MS = 2000
 WARNING_MS = 2600
 WAVE_BONUS = 100
@@ -244,6 +253,29 @@ def hazard(y, shift):
         screen.triangle(vec2(x0, y), vec2(x0, y + 6), vec2(x0 - 6, y + 6))
 
 
+def dpad(cx, cy, size, pen):
+    thick = size / 3
+    screen.pen = pen
+    screen.rectangle(int(cx - thick / 2), int(cy - size / 2), int(thick), int(size))
+    screen.rectangle(int(cx - size / 2), int(cy - thick / 2), int(size), int(thick))
+
+
+def key(x, y, w, h, pen):
+    screen.pen = pen
+    screen.shape(shape.rounded_rectangle(x, y, w, h, 1))
+
+
+# HOW TO PLAY rows: (text y, label, colour, outline around the control in the badge drawing).
+HELP_ROWS = (
+    (17, "FLY AROUND", CYAN, (43, 33, 15, 15)),
+    (29, "FIRE (HOLD)", GOLD, (17, 32, 13, 13)),
+    (41, "PAUSE", PAUSE_PEN, (10, 39, 25, 10)),
+    (68, "MOVE", CYAN, (14, 93, 25, 10)),
+    (80, "FIRE (HOLD)", GOLD, (42, 93, 11, 10)),
+    (92, "OCTO-BURST", PINK, (58, 60, 7, 26)),
+)
+
+
 class Game:
     TITLE = 0
     PLAY = 1
@@ -251,6 +283,7 @@ class Game:
     AD = 3
     ENTRY = 4
     SCORES = 5
+    HELP = 6
 
     FIGHT = 0
     CLEAR = 1
@@ -292,6 +325,7 @@ class Game:
         self.entry_pos = 0
         self.entry_at = 0
         self.highlight = None
+        self.help_attract = False
         self.state_at = 0
         self.title_at = 0
         self.title_landed = False
@@ -303,7 +337,7 @@ class Game:
     def set_state(self, state, now):
         self.state = state
         self.state_at = now
-        self.glow.breathe = state in (Game.TITLE, Game.SCORES) or (state == Game.PLAY and self.demo)
+        self.glow.breathe = state in (Game.TITLE, Game.SCORES, Game.HELP) or (state == Game.PLAY and self.demo)
 
     def go_title(self, now):
         self.demo = False
@@ -321,6 +355,13 @@ class Game:
         self.highlight = highlight
         self.space.warp_target = 0.0
         self.set_state(Game.SCORES, now)
+
+    def show_help(self, now, attract=False):
+        """The controls card; it starts a game unless it is part of the attract loop."""
+        self.demo = False
+        self.help_attract = attract
+        self.space.warp_target = 0.0
+        self.set_state(Game.HELP, now)
 
     def start(self, demo=False):
         self.demo = demo
@@ -472,6 +513,10 @@ class Game:
                 return True
         return False
 
+    def burst_pressed(self):
+        # Only the physical side buttons: up on the touch pad moves Pew instead.
+        return badge.buttons.pressed(BUTTON_UP) or badge.buttons.pressed(BUTTON_DOWN)
+
     def update(self, dt_ms):
         now = badge.ticks
         if self.state != Game.PAUSE:
@@ -486,7 +531,7 @@ class Game:
             self.freeze -= dt_ms
             if self.demo and self.any_pressed():
                 self.go_title(now)
-            elif badge.pressed(BUTTON_UP):
+            elif self.burst_pressed():
                 self.burst_queued = True
             return
 
@@ -497,7 +542,7 @@ class Game:
 
         if self.state == Game.TITLE:
             if badge.pressed(BUTTON_SELECT):
-                self.start()
+                self.show_help(now)
             elif badge.pressed(BUTTON_DOWN):
                 self.toggle_tilt()
                 self.title_at = min(self.title_at, now - 1200)
@@ -509,15 +554,26 @@ class Game:
                 self.start(demo=True)
         elif self.state == Game.SCORES:
             if badge.pressed(BUTTON_SELECT):
-                self.start()
+                self.show_help(now)
             elif self.any_pressed():
                 self.go_title(now)
             elif now - self.state_at > SCORES_MS:
+                self.show_help(now, attract=True)
+        elif self.state == Game.HELP:
+            t = now - self.state_at
+            if t > HELP_GUARD_MS and badge.pressed(BUTTON_SELECT):
+                self.start()
+            elif badge.pressed(BUTTON_BACK) or (self.help_attract and self.any_pressed()):
                 self.go_title(now)
+            elif t > HELP_MS:
+                if self.help_attract:
+                    self.go_title(now)
+                else:
+                    self.start()
         elif self.state == Game.PLAY:
             if self.demo:
                 if badge.pressed(BUTTON_SELECT):
-                    self.start()
+                    self.show_help(now)
                 elif self.any_pressed():
                     self.go_title(now)
                 elif now - self.state_at > DEMO_MS:
@@ -617,15 +673,18 @@ class Game:
         self.ghosts = [g for g in self.ghosts if g[3] > now]
 
         if self.demo:
-            axis = self.demo_axis()
+            axis = (self.demo_axis(), 0.0)
             fire = True
             use_burst = pew.charged()
         else:
             axis = self.controls.axis(dt_ms)
             fire = badge.held(BUTTON_SELECT) or badge.pressed(BUTTON_SELECT)
-            use_burst = badge.pressed(BUTTON_UP) or self.burst_queued
+            use_burst = self.burst_pressed() or self.burst_queued
         self.burst_queued = False
-        pew.move(axis, dt)
+        pew.move(axis[0], axis[1], dt)
+        if not boss:
+            # Pew can't fly up into the fleet.
+            pew.y = max(pew.y, min(HOME_Y, fleet.bottom() + 2))
         if fire:
             pew.fire(now)
         if use_burst and pew.burst():
@@ -676,7 +735,7 @@ class Game:
         if self.phase == Game.FIGHT:
             if fleet.count == 0:
                 self.wave_cleared()
-            elif fleet.bottom() >= pew.y + 8:
+            elif fleet.bottom() >= HOME_Y + 8:
                 x, y = pew.centre()
                 self.particles.burst(x, y, RED, 16, 80)
                 self.shake.kick(6)
@@ -768,6 +827,8 @@ class Game:
             self.draw_title(now)
         elif self.state == Game.SCORES:
             self.draw_scores(now)
+        elif self.state == Game.HELP:
+            self.draw_help(now)
         elif self.state == Game.AD:
             self.draw_ad(now)
         else:
@@ -1028,6 +1089,70 @@ class Game:
         if t > 1200 and (now // 500) % 2:
             centre_text("PRESS SELECT", 105, GOLD)
 
+    def draw_help(self, now):
+        t = now - self.state_at
+        focus = (now // 900) % len(HELP_ROWS)
+        screen.pen = PANEL
+        screen.rectangle(0, 0, W, H)
+
+        # The badge as it hangs on the lanyard: purple touch card on top, screen below.
+        screen.pen = CARD
+        screen.shape(shape.rounded_rectangle(8, 6, 52, 44, 4))
+        screen.pen = CARD_PRINT
+        screen.shape(shape.rounded_rectangle(11, 9, 46, 21, 3))
+        dpad(50, 40, 12, CYAN)
+        screen.pen = GOLD
+        screen.circle(vec2(23, 38), 4.5)
+        screen.pen = PAUSE_PEN
+        screen.circle(vec2(15, 44), 3.5)
+        key(28, 42, 5, 3, PAUSE_PEN)
+        key(35, 42, 5, 3, HOME_PEN)
+
+        screen.pen = BODY
+        screen.shape(shape.rounded_rectangle(8, 52, 52, 58, 6))
+        screen.pen = BEZEL
+        screen.rectangle(13, 56, 42, 32)
+        screen.pen = BLACK
+        screen.rectangle(15, 58, 38, 28)
+        screen.blit(SPRITE, rect(27, 68 + int(math.sin(now / 250)), 14, 12))
+        key(16, 95, 7, 6, CYAN)
+        key(30, 95, 7, 6, CYAN)
+        key(44, 95, 7, 6, GOLD)
+        key(60, 62, 3, 8, PINK)
+        key(60, 76, 3, 8, PINK)
+
+        # Legend, colour-coded to the drawing; one control at a time gets a blinking frame.
+        x = 67
+        screen.font = SMALL
+        shadow_text("TOUCH PAD", x, 5, DIM)
+        shadow_text("BUTTONS", x, 56, DIM)
+        dpad(x + 5, 24, 9, CYAN)
+        screen.pen = GOLD
+        screen.circle(vec2(x + 5, 36), 4)
+        screen.pen = PAUSE_PEN
+        screen.circle(vec2(x + 3, 48), 2.5)
+        key(x + 7, 47, 4, 3, PAUSE_PEN)
+        key(x, 72, 4, 6, CYAN)
+        key(x + 6, 72, 4, 6, CYAN)
+        key(x + 2, 84, 6, 6, GOLD)
+        key(x + 2, 95, 2, 7, PINK)
+        key(x + 6, 95, 2, 7, PINK)
+        for i, (y, text, pen, box) in enumerate(HELP_ROWS):
+            shadow_text(text, x + 12, y, WHITE if i == focus else pen)
+        if (now // 300) % 2 == 0:
+            bx, by, bw, bh = HELP_ROWS[focus][3]
+            screen.pen = WHITE
+            screen.shape(shape.rectangle(bx, by, bw, bh).stroke(1))
+
+        prompt = "PRESS SELECT" if self.help_attract else "SELECT: PLAY!"
+        width, _ = screen.measure_text(prompt)
+        if (now // 400) % 2 or t < HELP_GUARD_MS:
+            shadow_text(prompt, x + (W - x - width) / 2, 104, GOLD)
+        if not self.help_attract:
+            # The game starts by itself when this runs out.
+            screen.pen = GOLD
+            screen.rectangle(x, 117, int((W - 2 - x) * max(0.0, 1 - t / HELP_MS)), 2)
+
     def draw_ad(self, now):
         t = now - self.state_at
 
@@ -1054,13 +1179,18 @@ class Game:
             label("FORKLIFT", CRIMSON).draw(right, 38, punch(t - 400))
         if t > 650:
             label("CERTIFIED!", CRIMSON).draw(right, 56, punch(t - 650), (now // 150) % 6 == 0)
+        for i in range(5):
+            # Five-star rating, one star at a time.
+            age = t - 1400 - i * 180
+            if age > 0:
+                draw_star(right - 24 + i * 12, 67, 3.5 * min(1.0, age / 150) + 0.01, now * 0.2 + i * 40, RED)
         if t > 1000:
             screen.font = SMALL
-            ink_text("SPONSORED BY", right, 70)
+            ink_text("SPONSORED BY", right, 72)
             pew = label("PEW", ROSE)
             left = right - (17 + pew.width) / 2
-            screen.blit(SPRITE, rect(int(left), 80, 14, 12))
-            pew.draw(left + 17 + pew.width / 2, 86)
+            screen.blit(SPRITE, rect(int(left), 84, 14, 12))
+            pew.draw(left + 17 + pew.width / 2, 90)
 
         shift = int(now / 40) % 12
         hazard(11, shift)
