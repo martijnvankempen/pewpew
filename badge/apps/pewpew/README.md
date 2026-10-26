@@ -24,7 +24,7 @@ the screen. Stars also cancel alien zaps. Clear all 15 aliens to start a
 faster wave; you lose when your three lives are gone or the fleet reaches Pew.
 
 Losing plays a 6-second sponsor ad that can't be skipped (get yourself
-forklift certified, sponsored by Pew), then the name entry for a top-five
+forklift certified, sponsored by CoE), then the name entry for a top-five
 score or the title screen.
 
 Aliens are worth 30 (top row), 20 (middle) and 10 (bottom) points, double

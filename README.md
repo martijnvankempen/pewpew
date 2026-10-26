@@ -107,7 +107,7 @@ new row highlighted.
 
 When you lose, a 6-second sponsor ad plays and no button can skip it. A red
 forklift reverses in on a spinning sunburst with "GET YOURSELF FORKLIFT
-CERTIFIED!", a five-star rating and "SPONSORED BY PEW". The top bar shows
+CERTIFIED!", a five-star rating and "SPONSORED BY CoE". The top bar shows
 GAME OVER and your
 final score; the bottom bar counts down and fills up, and the case LEDs pulse
 like a forklift's warning beacon. After the ad you go to the name entry if

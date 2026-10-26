@@ -1180,10 +1180,7 @@ class Game:
         if t > 1000:
             screen.font = SMALL
             ink_text("SPONSORED BY", right, 72)
-            pew = label("PEW", ROSE)
-            left = right - (17 + pew.width) / 2
-            screen.blit(SPRITE, rect(int(left), 84, 14, 12))
-            pew.draw(left + 17 + pew.width / 2, 90)
+            label("CoE", ICE).draw(right, 90, punch(t - 1000))
 
         shift = int(now / 40) % 12
         hazard(11, shift)
