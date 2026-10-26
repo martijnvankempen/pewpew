@@ -13,20 +13,19 @@ lives or the fleet reaches Pew.
 
 ### Controls
 
-| Badge button | Simulator key | Title screen | Playing | Paused | Game over | Name entry |
+| Badge button | Simulator key | Title screen | Playing | Paused | Ad (after losing) | Name entry |
 | --- | --- | --- | --- | --- | --- | --- |
 | LEFT / RIGHT | Arrow keys, or A / D | | Move Pew | | | Previous / next letter |
-| SELECT | Space or Enter, or J | Start | Fire (hold for auto-fire) | Resume | Play again, or enter your name | Next letter; on the last one, save |
+| SELECT | Space or Enter, or J | Start | Fire (hold for auto-fire) | Resume | | Next letter; on the last one, save |
 | UP | Arrow Up, or W | | Octo-burst (when charged) | | | Change letter |
 | DOWN | Arrow Down, or S | Tilt-to-steer on/off | | | | Change letter |
-| BACK | K | | Pause | Quit to title | Back to title, or enter your name | Previous letter |
+| BACK | K | | Pause | Quit to title | | Previous letter |
 | MENU | U | | Pause | | | |
 | HOME | Esc | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu |
 
 The badge's touch pad and physical buttons do the same thing, and the
-controls follow the screen when you hold the badge upside down. On the game
-over screen, SELECT and BACK work after a short pause (0.9 s) so you don't
-skip it by accident.
+controls follow the screen when you hold the badge upside down. No button
+does anything during the ad.
 
 ### Attract mode
 
@@ -75,9 +74,19 @@ life, resets the combo (Octo-burst stars that miss don't count).
 
 The five best scores are kept on the badge with three-letter initials. It
 starts with made-up scores to beat, arcade style. When your score makes
-the table, the game over screen leads to the name entry, which remembers the
+the table, the name entry follows the ad, and it remembers the
 last initials you used. The Hall of Fame is saved straight away and shown with your
 new row highlighted.
+
+### The ad
+
+When you lose, a 3-second sponsor ad plays and no button can skip it. A red
+forklift reverses in on a spinning sunburst with "GET YOURSELF FORKLIFT
+CERTIFIED!" and "SPONSORED BY PEW". The top bar shows GAME OVER and your
+final score; the bottom bar counts down and fills up, and the case LEDs pulse
+like a forklift's warning beacon. After the ad you go to the name entry if
+your score made the Hall of Fame, otherwise back to the title screen. The
+self-playing demo never shows the ad.
 
 ### The alien fleet
 
@@ -149,7 +158,7 @@ keep working while tilt is on.
 ### Saved on the badge
 
 The Hall of Fame, your last initials, the best score and the tilt setting are
-kept between games and after a reset. Scores are only saved at game over:
+kept between games and after a reset. Scores are only saved when you lose:
 quitting to the title from the pause screen, or pressing HOME, doesn't save
 them.
 
@@ -157,14 +166,14 @@ them.
 
 | Path | What |
 | --- | --- |
-| `badge/apps/pewpew/__init__.py` | App setup, screens (title, attract demo, play, pause, game over, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
+| `badge/apps/pewpew/__init__.py` | App setup, screens (title, attract demo, play, pause, game-over ad, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
 | `badge/apps/pewpew/pew.py` | Pew: movement, alternating shots, Octo-burst, lives |
 | `badge/apps/pewpew/aliens.py` | The fleet: fly-in, march, pace changes, divers, zaps, hit tests |
 | `badge/apps/pewpew/boss.py` | The boss: entry, movement, fan/aimed/laser attacks, damage, death |
 | `badge/apps/pewpew/fx.py` | Nebula, planet and warping starfield, particles, shockwave rings, score popups, screen flash and shake, case LEDs |
 | `badge/apps/pewpew/controls.py` | Buttons plus optional tilt-to-steer |
 | `badge/apps/pewpew/assets/`, `icon.png` | Generated images |
-| `tools/make_assets.py` | Builds the images from `pew.png` (needs Pillow) |
+| `tools/make_assets.py` | Builds the images from `pew.png`, and the ad's forklift from `forklift.jpg` (needs Pillow) |
 | `tools/simulate.mjs` | Runs the app in the badge simulator in a browser (needs Node and a badger/home clone) |
 
 The app uses the 2026 runtime globals (`badge`, `screen`, `image`, ...), not
@@ -179,6 +188,11 @@ python3 -m venv ~/.venvs/pewpew && ~/.venvs/pewpew/bin/pip install pillow
 
 The script prints the finger-tip positions in the player sprite; keep
 `MUZZLES` in `pew.py` in sync if the sprite changes.
+
+The forklift photo `forklift.jpg` isn't in git. Put it in the repository root
+to rebuild `assets/forklift.png`: the script removes the background, paints
+over the brand lettering and the side sticker (`BRAND_BOXES`) and turns the
+orange paint red. Without the photo it keeps the committed `forklift.png`.
 
 ## Check and run
 

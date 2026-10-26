@@ -20,6 +20,7 @@ W = screen.width
 H = screen.height
 
 LOGO = image.load("assets/logo.png")
+FORKLIFT = image.load("assets/forklift.png")
 SMALL = font.nope
 LARGE = font.ziplock
 # Rows of the font bitmaps that hold capital letters (used for the gradients).
@@ -40,6 +41,11 @@ RED = color.rgb(226, 59, 59)
 CYAN = color.rgb(120, 220, 255)
 BOSS_PEN = color.rgb(*BOSS_RGB)
 MEDALS = (color.rgb(255, 215, 80), color.rgb(205, 215, 235), color.rgb(225, 150, 90))
+BLACK = color.rgb(0, 0, 0)
+INK = color.rgb(40, 22, 18)
+AD_YELLOW = color.rgb(255, 212, 55)
+AD_RAY = color.rgb(255, 188, 30)
+DUST = color.rgb(150, 120, 80)
 
 # Gradient styles for big text: (top, bottom, outline).
 GOLDEN = ((255, 250, 190), (255, 140, 30), (60, 20, 10))
@@ -49,7 +55,8 @@ ICE = ((225, 255, 255), (50, 140, 255), (10, 20, 60))
 
 MAX_FRAME_MS = 100
 BANNER_MS = 1300
-OVER_HOLD_MS = 900
+AD_MS = 3000
+AD_DRIVE_MS = 600
 CLEAR_MS = 2000
 WARNING_MS = 2600
 WAVE_BONUS = 100
@@ -60,7 +67,6 @@ COMBO_STEPS = (5, 10, 20, 30)
 TITLE_IDLE_MS = 9000
 DEMO_MS = 30000
 SCORES_MS = 6500
-OVER_IDLE_MS = 20000
 ENTRY_IDLE_MS = 30000
 BOARD_SIZE = 5
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
@@ -213,11 +219,36 @@ def bounce(t):
     return 1 - (0.04 - t * t) * 4 if t < 0.2 else 1.0
 
 
+def ad_forklift_x(t):
+    """The ad's forklift reverses in from the left and parks at x=6."""
+    return -FORKLIFT.width + (6 + FORKLIFT.width) * ease_out_back(t / AD_DRIVE_MS)
+
+
+def ink_text(text, cx, y):
+    """Dark text with a light drop shadow, for the yellow ad background."""
+    width, _ = screen.measure_text(text)
+    screen.pen = color.rgb(255, 255, 255, 150)
+    screen.text(text, cx - width / 2 + 1, y + 1)
+    screen.pen = INK
+    screen.text(text, cx - width / 2, y)
+
+
+def hazard(y, shift):
+    """A 6 px yellow-and-black hazard stripe across the screen."""
+    screen.pen = AD_YELLOW
+    screen.rectangle(0, y, W, 6)
+    screen.pen = BLACK
+    for x in range(-12, W + 12, 12):
+        x0 = x + shift
+        screen.triangle(vec2(x0, y), vec2(x0 + 6, y), vec2(x0, y + 6))
+        screen.triangle(vec2(x0, y), vec2(x0, y + 6), vec2(x0 - 6, y + 6))
+
+
 class Game:
     TITLE = 0
     PLAY = 1
     PAUSE = 2
-    OVER = 3
+    AD = 3
     ENTRY = 4
     SCORES = 5
 
@@ -244,7 +275,6 @@ class Game:
         self.phase_until = 0
         self.phase_at = 0
         self.banner_until = 0
-        self.over_at = 0
         self.new_best = False
         self.demo = False
         self.freeze = 0
@@ -256,9 +286,6 @@ class Game:
         self.clear_text = ""
         self.perfect = False
         self.combo = 0
-        self.best_combo = 0
-        self.shots = 0
-        self.hits = 0
         self.wave_damage = 0
         self.rank = None
         self.entry_name = list(saved["name"])
@@ -302,9 +329,6 @@ class Game:
         self.shown_score = 0.0
         self.wave = 1
         self.combo = 0
-        self.best_combo = 0
-        self.shots = 0
-        self.hits = 0
         self.freeze = 0
         self.ghosts = []
         self.callout = None
@@ -375,13 +399,20 @@ class Game:
         if self.demo:
             self.show_scores(now)
             return
-        self.over_at = now
         self.rank = board_rank(self.score)
         self.new_best = self.score > best_score()
         if self.score > saved["highscore"]:
             saved["highscore"] = self.score
             State.save("pewpew", saved)
-        self.set_state(Game.OVER, now)
+        self.particles.clear()
+        self.glow.alarm(now, AD_MS)
+        self.set_state(Game.AD, now)
+
+    def end_ad(self, now):
+        if self.rank is not None:
+            self.enter_name(now)
+        else:
+            self.go_title(now)
 
     def enter_name(self, now):
         self.entry_name = list(saved["name"])
@@ -417,7 +448,6 @@ class Game:
     def count_hit(self):
         before = self.multiplier()
         self.combo += 1
-        self.best_combo = max(self.best_combo, self.combo)
         after = self.multiplier()
         if after > before:
             self.call("COMBO x%d" % after, GOLDEN, 900)
@@ -503,33 +533,15 @@ class Game:
                 self.set_state(Game.PLAY, now)
             elif badge.pressed(BUTTON_BACK):
                 self.go_title(now)
-        elif self.state == Game.OVER:
-            self.update_over(now)
+        elif self.state == Game.AD:
+            # Unskippable: no button does anything until the ad has run.
+            t = now - self.state_at
+            if t < AD_DRIVE_MS and random.random() < 0.6:
+                self.particles.burst(ad_forklift_x(t) + 10, 92, DUST, 1, 25)
+            if t >= AD_MS:
+                self.end_ad(now)
         elif self.state == Game.ENTRY:
             self.update_entry(now)
-
-    def update_over(self, now):
-        self.shown_score = min(self.score, self.shown_score + max(1.0, self.score / 40))
-        if self.rank is not None and (now // 160) % 3 == 0 and random.random() < 0.5:
-            self.particles.burst(random.uniform(10, W - 10), random.uniform(-4, 20),
-                                 PENS[random.randrange(3)], 3, 40)
-        if now - self.over_at <= OVER_HOLD_MS:
-            return
-        if badge.pressed(BUTTON_SELECT):
-            if self.rank is not None:
-                self.enter_name(now)
-            else:
-                self.start()
-        elif badge.pressed(BUTTON_BACK):
-            if self.rank is not None:
-                self.enter_name(now)
-            else:
-                self.go_title(now)
-        elif now - self.over_at > OVER_IDLE_MS:
-            if self.rank is not None:
-                self.enter_name(now)
-            else:
-                self.show_scores(now)
 
     def update_entry(self, now):
         name = self.entry_name
@@ -614,8 +626,8 @@ class Game:
             use_burst = badge.pressed(BUTTON_UP) or self.burst_queued
         self.burst_queued = False
         pew.move(axis, dt)
-        if fire and pew.fire(now):
-            self.shots += 1
+        if fire:
+            pew.fire(now)
         if use_burst and pew.burst():
             self.burst_at = now
             self.call("OCTO-BURST!", ROSE, 900)
@@ -683,8 +695,6 @@ class Game:
                 cy = ay + ALIEN_H / 2
                 pew.stars.remove(star)
                 pew.add_charge()
-                if not star.burst:
-                    self.hits += 1
                 self.count_hit()
                 self.add_points(POINTS[row] * (2 if dove else 1), cx, ay, RGBS[row])
                 self.ghosts.append((ax, ay, row, self.clock + 70))
@@ -706,8 +716,6 @@ class Game:
                 x, y, killed = hit
                 pew.stars.remove(star)
                 pew.add_charge()
-                if not star.burst:
-                    self.hits += 1
                 self.count_hit()
                 self.add_points(BOSS_HIT, x, y, BOSS_RGB)
                 self.particles.burst(x, y, BOSS_PEN, 5, 45)
@@ -760,6 +768,8 @@ class Game:
             self.draw_title(now)
         elif self.state == Game.SCORES:
             self.draw_scores(now)
+        elif self.state == Game.AD:
+            self.draw_ad(now)
         else:
             self.draw_play(now)
         self.flash.draw()
@@ -776,7 +786,7 @@ class Game:
         self.particles.draw(ox, oy)
         self.rings.draw(ox, oy)
         self.popups.draw(ox, oy)
-        if self.state in (Game.OVER, Game.ENTRY):
+        if self.state == Game.ENTRY:
             screen.pen = DARK_VEIL
             screen.rectangle(0, 0, W, H)
             self.particles.draw(0, 0)
@@ -790,8 +800,6 @@ class Game:
             screen.font = SMALL
             centre_text("SELECT resume", 66, DIM)
             centre_text("BACK title", 78, DIM)
-        elif self.state == Game.OVER:
-            self.draw_over(now)
         elif self.state == Game.ENTRY:
             self.draw_entry(now)
         elif self.demo:
@@ -1020,30 +1028,64 @@ class Game:
         if t > 1200 and (now // 500) % 2:
             centre_text("PRESS SELECT", 105, GOLD)
 
-    def draw_over(self, now):
-        age = now - self.over_at
-        label("GAME OVER", CRIMSON).draw(W / 2, 24, punch(age, 260))
+    def draw_ad(self, now):
+        t = now - self.state_at
+
+        # Infomercial sunburst behind the forklift.
+        screen.pen = AD_YELLOW
+        screen.rectangle(0, 0, W, H)
+        screen.pen = AD_RAY
+        cx, cy = 35, 64
+        spin = now / 1500
+        for i in range(12):
+            a = spin + i * math.pi / 6
+            screen.triangle(vec2(cx, cy), vec2(cx + math.cos(a) * 220, cy + math.sin(a) * 220),
+                            vec2(cx + math.cos(a + 0.26) * 220, cy + math.sin(a + 0.26) * 220))
+
+        rumble = int(math.sin(t / 40)) if t < AD_DRIVE_MS else 0
+        screen.blit(FORKLIFT, vec2(int(ad_forklift_x(t)), 36 + rumble))
+        self.particles.draw(0, 0)
+
+        right = 112
         screen.font = SMALL
-        if age > 300:
-            centre_text("%d" % int(self.shown_score), 38, WHITE, 2)
-        if age > 600:
-            accuracy = 100 * self.hits // self.shots if self.shots else 0
-            centre_text("WAVE %d   HIT %d%%" % (self.wave, accuracy), 60, DIM)
-            centre_text("BEST COMBO %d" % self.best_combo, 72, DIM)
-        if age > 800:
-            if self.new_best:
-                centre_text("NEW HIGH SCORE!", 84, GOLD if (now // 150) % 2 else PINK)
-            elif self.rank is not None:
-                centre_text("TOP %d SCORE!" % BOARD_SIZE, 84, GOLD)
-            else:
-                centre_text("BEST %d" % best_score(), 84, DIM)
-        if age > OVER_HOLD_MS:
-            pen = WHITE if (now // 400) % 2 else GOLD
-            if self.rank is not None:
-                centre_text("SELECT: ENTER NAME", 98, pen)
-            else:
-                centre_text("SELECT: PLAY AGAIN", 96, pen)
-                centre_text("BACK: TITLE", 107, DIM)
+        if t > 200:
+            ink_text("GET YOURSELF", right, 18)
+        if t > 400:
+            label("FORKLIFT", CRIMSON).draw(right, 38, punch(t - 400))
+        if t > 650:
+            label("CERTIFIED!", CRIMSON).draw(right, 56, punch(t - 650), (now // 150) % 6 == 0)
+        if t > 1000:
+            screen.font = SMALL
+            ink_text("SPONSORED BY", right, 70)
+            pew = label("PEW", ROSE)
+            left = right - (17 + pew.width) / 2
+            screen.blit(SPRITE, rect(int(left), 80, 14, 12))
+            pew.draw(left + 17 + pew.width / 2, 86)
+
+        shift = int(now / 40) % 12
+        hazard(11, shift)
+        hazard(100, -shift)
+
+        # Top bar: AD tag, GAME OVER, final score. Bottom bar: the bad news, countdown, progress.
+        screen.pen = BLACK
+        screen.rectangle(0, 0, W, 11)
+        screen.rectangle(0, 106, W, 14)
+        screen.pen = AD_YELLOW
+        screen.shape(shape.rounded_rectangle(1, 0, 17, 11, 2))
+        screen.font = SMALL
+        screen.pen = BLACK
+        screen.text("AD", 4, -1)
+        centre_text("GAME OVER", -1, WHITE)
+        score = "%d" % self.score
+        width, _ = screen.measure_text(score)
+        shadow_text(score, W - 2 - width, -1, GOLD)
+        shadow_text("CAN'T SKIP THIS AD", 2, 106, DIM)
+        left_ms = max(0, AD_MS - t)
+        countdown = "0:%02d" % ((left_ms + 999) // 1000)
+        width, _ = screen.measure_text(countdown)
+        shadow_text(countdown, W - 2 - width, 106, WHITE)
+        screen.pen = AD_YELLOW
+        screen.rectangle(0, H - 2, int(W * min(1.0, t / AD_MS)), 2)
 
     def draw_entry(self, now):
         label("NEW HIGH SCORE!" if self.new_best else "TOP %d!" % BOARD_SIZE, GOLDEN).draw(W / 2, 16)
