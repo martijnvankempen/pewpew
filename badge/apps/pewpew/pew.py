@@ -28,6 +28,9 @@ BURST_PEN = color.rgb(255, 140, 215)
 STAR_HALO = color.rgb(255, 228, 90, 70)
 BURST_HALO = color.rgb(255, 140, 215, 70)
 MUZZLE_PEN = color.rgb(255, 255, 210)
+STAR_TRAIL = (color.rgb(255, 228, 90, 110), color.rgb(255, 228, 90, 50))
+BURST_TRAIL = (color.rgb(255, 140, 215, 110), color.rgb(255, 140, 215, 50))
+SHIELD_RGB = (120, 220, 255)
 
 
 class Star:
@@ -86,10 +89,14 @@ class Pew:
         return True
 
     def update_stars(self, dt):
+        """Move the stars; returns how many aimed (non-burst) stars flew off without a hit."""
         for s in self.stars:
             s.x += s.vx * dt
             s.y += s.vy * dt
-        self.stars = [s for s in self.stars if -6 < s.y and -6 < s.x < W + 6]
+        kept = [s for s in self.stars if -6 < s.y and -6 < s.x < W + 6]
+        missed = sum(1 for s in self.stars if not s.burst) - sum(1 for s in kept if not s.burst)
+        self.stars = kept
+        return missed
 
     def blinking(self, now):
         return now < self.hit_until
@@ -108,15 +115,32 @@ class Pew:
         for s in self.stars:
             x = s.x + ox
             y = s.y + oy
+            trail = BURST_TRAIL if s.burst else STAR_TRAIL
+            screen.pen = trail[1]
+            screen.circle(vec2(x - s.vx * 0.06, y - s.vy * 0.06), 1.5)
+            screen.pen = trail[0]
+            screen.circle(vec2(x - s.vx * 0.03, y - s.vy * 0.03), 2.5)
             screen.pen = BURST_HALO if s.burst else STAR_HALO
             screen.circle(vec2(x, y), STAR_RADIUS + 1)
             draw_star(x, y, STAR_RADIUS, now * 0.6 + s.x * 7, BURST_PEN if s.burst else STAR_PEN)
 
-        if self.lives <= 0 or (self.blinking(now) and (now // 100) % 2):
+        if self.lives <= 0:
             return
         x = int(self.x + ox)
         y = int(self.y + oy + math.sin(now / 250))
-        screen.blit(SPRITE, vec2(x, y))
+        if self.blinking(now):
+            # Shield bubble while Pew can't be hurt.
+            left = (self.hit_until - now) / INVULNERABLE_MS
+            pulse = 0.5 + 0.5 * math.sin(now / 60)
+            screen.pen = color.rgb(SHIELD_RGB[0], SHIELD_RGB[1], SHIELD_RGB[2], int(40 + 120 * left * pulse))
+            screen.shape(shape.circle(x + SPRITE_W / 2, y + SPRITE_H / 2 + 1, 15).stroke(1))
+            if (now // 100) % 2:
+                return
+        if now < self.flash_until:
+            # Squash a little with the recoil of each shot.
+            screen.blit(SPRITE, rect(x - 1, y + 1, SPRITE_W + 2, SPRITE_H - 1))
+        else:
+            screen.blit(SPRITE, vec2(x, y))
         if now < self.flash_until:
             mx, my = MUZZLES[self.flash_hand]
             screen.pen = MUZZLE_PEN
