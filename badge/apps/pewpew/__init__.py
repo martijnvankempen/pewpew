@@ -275,6 +275,55 @@ def arrow(x1, y1, x2, y2, pen):
     screen.triangle(vec2(x2, y2), vec2(bx - uy * 2.5, by + ux * 2.5), vec2(bx + uy * 2.5, by - ux * 2.5))
 
 
+# Where the physical buttons sit just off the screen (badge upright), in screen pixels.
+SELECT_X = 128
+SIDE_YS = (36, 88)
+
+
+def fat_arrow(x1, y1, x2, y2, pen):
+    """A bold 3 px arrow with a drop shadow, tip at (x2, y2)."""
+    dx, dy = x2 - x1, y2 - y1
+    d = math.sqrt(dx * dx + dy * dy) or 1.0
+    ux, uy = dx / d, dy / d
+    px, py = -uy, ux
+    bx, by = x2 - ux * 6, y2 - uy * 6
+    for ink, o in ((SHADOW, 1), (pen, 0)):
+        screen.pen = ink
+        a = vec2(x1 + px * 1.5 + o, y1 + py * 1.5 + o)
+        b = vec2(x1 - px * 1.5 + o, y1 - py * 1.5 + o)
+        c = vec2(bx - px * 1.5 + o, by - py * 1.5 + o)
+        e = vec2(bx + px * 1.5 + o, by + py * 1.5 + o)
+        screen.triangle(a, b, c)
+        screen.triangle(a, c, e)
+        screen.triangle(vec2(x2 + o, y2 + o), vec2(bx + px * 4.5 + o, by + py * 4.5 + o),
+                        vec2(bx - px * 4.5 + o, by - py * 4.5 + o))
+
+
+def point_select(now, text, pen=GOLD):
+    """Text with a bouncing arrow aimed at the real SELECT button just off the screen."""
+    bob = abs(math.sin(now / 160)) * 3
+    screen.font = SMALL
+    width, _ = screen.measure_text(text)
+    if badge.upside_down():
+        # Turned round, the buttons are above the screen and mirrored.
+        x = W - SELECT_X
+        fat_arrow(x, 15 - bob, x, 2 - bob, pen)
+        shadow_text(text, x + 7, 2, pen)
+    else:
+        fat_arrow(SELECT_X, H - 15 + bob, SELECT_X, H - 2 + bob, pen)
+        shadow_text(text, SELECT_X - 7 - width, H - 13, pen)
+
+
+def point_side(now, pen):
+    """Arrows aimed at the two real buttons on the badge's side edge."""
+    bob = abs(math.sin(now / 160)) * 3
+    for y in SIDE_YS:
+        if badge.upside_down():
+            fat_arrow(14 - bob, H - y, 1 - bob, H - y, pen)
+        else:
+            fat_arrow(W - 15 + bob, y, W - 2 + bob, y, pen)
+
+
 # HOW TO PLAY callouts around the badge drawing:
 # (label, colour, side: -1 left / 1 right, text y, arrow tip, frame around the control).
 HELP_CALLOUTS = (
@@ -869,8 +918,8 @@ class Game:
             self.draw_veil()
             label("PAUSED", ICE).draw(W / 2, 44)
             screen.font = SMALL
-            centre_text("SELECT resume", 66, DIM)
-            centre_text("BACK title", 78, DIM)
+            centre_text("BACK: TITLE", 66, DIM)
+            point_select(now, "RESUME")
         elif self.state == Game.ENTRY:
             self.draw_entry(now)
         elif self.demo:
@@ -907,7 +956,8 @@ class Game:
         # One centre slot: the burst prompt blinks over the combo, which replaces HI.
         pew = self.pew
         if pew.charged() and not self.demo and (now // 250) % 2:
-            centre_text("UP: BURST!", 0, PINK)
+            centre_text("BURST!", 0, PINK)
+            point_side(now, PINK)
         elif mult > 1:
             centre_text("COMBO x%d" % mult, 0, GOLD if (now // 120) % 2 else PINK)
         elif self.demo:
@@ -984,11 +1034,7 @@ class Game:
             shadow_text(typed, (W - width) / 2, 80, PINK if typed == name or (age // 80) % 2 else WHITE)
 
     def draw_demo_overlay(self, now):
-        if (now // 600) % 2:
-            screen.pen = BAR_BACK
-            screen.rectangle(0, 68, W, 12)
-            screen.font = SMALL
-            centre_text("PRESS SELECT TO PLAY", 68, GOLD)
+        point_select(now, "PRESS TO PLAY")
 
     def draw_title(self, now):
         t = now - self.title_at
@@ -1049,13 +1095,13 @@ class Game:
             return
         screen.font = SMALL
         pulse = 0.5 + 0.5 * math.sin(now / 160)
-        centre_text("PRESS SELECT", 77, color.rgb(255, int(200 + 55 * pulse), int(90 + 140 * pulse)))
         top = saved["board"][0] if saved["board"] else ["---", 0]
         if top[1] >= best_score():
-            centre_text("HI %d  %s" % (best_score(), top[0]), 88, DIM)
+            centre_text("HI %d  %s" % (best_score(), top[0]), 77, DIM)
         else:
-            centre_text("HI %d" % best_score(), 88, DIM)
-        centre_text("DOWN: TILT %s" % ("ON" if saved["tilt"] else "OFF"), 99, DIM)
+            centre_text("HI %d" % best_score(), 77, DIM)
+        centre_text("DOWN: TILT %s" % ("ON" if saved["tilt"] else "OFF"), 88, DIM)
+        point_select(now, "PRESS TO PLAY", color.rgb(255, int(200 + 55 * pulse), int(90 + 140 * pulse)))
 
     def draw_comet(self, now):
         if self.comet is None or now > self.comet[4]:
@@ -1096,8 +1142,8 @@ class Game:
             score = "%d" % value
             width, _ = screen.measure_text(score)
             shadow_text(score, x + W - 16 - width, y, pen)
-        if t > 1200 and (now // 500) % 2:
-            centre_text("PRESS SELECT", 105, GOLD)
+        if t > 1200:
+            point_select(now, "PRESS TO PLAY")
 
     def draw_help(self, now):
         t = now - self.state_at
@@ -1132,8 +1178,10 @@ class Game:
         key(106, 72, 3, 8, PINK)
 
         screen.font = SMALL
-        shadow_text("HOW TO", 4, 2, WHITE)
-        shadow_text("PLAY", 4, 12, WHITE)
+        # The SELECT pointer takes the top corner when the badge is held upside down.
+        title_y = 98 if badge.upside_down() else 2
+        shadow_text("HOW TO", 4, title_y, WHITE)
+        shadow_text("PLAY", 4, title_y + 10, WHITE)
 
         # Labelled arrows to each control; one at a time turns white and gets a blinking frame.
         for i, (text, pen, side, y, tip, box) in enumerate(HELP_CALLOUTS):
@@ -1155,9 +1203,8 @@ class Game:
             screen.pen = WHITE
             screen.shape(shape.rectangle(bx, by, bw, bh).stroke(1))
 
-        prompt = "PRESS SELECT" if self.help_attract else "SELECT: PLAY!"
-        if (now // 400) % 2 or t < HELP_GUARD_MS:
-            centre_text(prompt, 107, GOLD)
+        if t >= HELP_GUARD_MS:
+            point_select(now, "PRESS TO PLAY")
 
     def draw_ad(self, now):
         t = now - self.state_at
@@ -1241,7 +1288,8 @@ class Game:
             screen.pen = pen
             screen.rectangle(x - 1, 73, 18, 1)
         centre_text("UP/DOWN: LETTER", 90, DIM)
-        centre_text("SELECT: NEXT", 101, DIM)
+        point_side(now, DIM)
+        point_select(now, "SAVE" if self.entry_pos == 2 else "NEXT")
 
 
 game = Game()

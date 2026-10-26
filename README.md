@@ -35,6 +35,12 @@ the screen below it.
 The controls follow the screen when you hold the badge upside down. No button
 does anything during the ad.
 
+You don't need to know the button names: whenever the game wants SELECT
+("PRESS TO PLAY", "RESUME", "NEXT"), a bouncing arrow at the bottom edge of
+the screen points straight down at the SELECT button under it. When the
+Octo-burst is ready, and on the name entry, arrows at the right edge point at
+the two side buttons. Held upside down, the arrows point up and left instead.
+
 ### How to play card
 
 Pressing SELECT on the title shows a HOW TO PLAY card before the game starts:
@@ -70,7 +76,8 @@ the Hall of Fame or the card; any other button goes to the title.
 ### Octo-burst
 
 - Every alien you hit adds one charge. Ten hits fill the bar along the bottom
-  edge of the screen; it turns pink and "UP: BURST!" flashes at the top.
+  edge of the screen; it turns pink, "BURST!" flashes at the top and arrows
+  point at the two buttons on the right edge.
 - Press either button on the right edge (UP or DOWN) to fire seven stars at
   once in a wide fan. Up on the touch pad moves Pew instead. Burst stars
   don't count towards the four-star limit.
