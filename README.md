@@ -5,6 +5,9 @@
 `pew.png`, fires spinning stars from alternating finger-guns at an alien
 fleet that marches, wobbles and swoops down at you.
 
+To play it on your own badge, see
+[Install on your badge](#install-on-your-badge).
+
 ## What it looks like
 
 These are captures from the badge simulator (`tools/simulate.mjs`). The
@@ -25,6 +28,128 @@ badge's 160x120 screen is shown at 2x in the animation and 3x in the stills.
 | **Boss warning** every third wave | **Boss fight** with its health bar | **Game over**: the 6-second sponsor ad |
 | ![Name entry for a top-5 score](docs/screenshots/name-entry.png) | ![Hall of Fame](docs/screenshots/hall-of-fame.png) | |
 | **Name entry** for a top-5 score | **Hall of Fame** | |
+
+## Install on your badge
+
+The game is one folder, `badge/apps/pewpew`. Copy it into the badge's `apps`
+folder and it shows up in the badge menu. No firmware update, Wi-Fi or extra
+hardware is needed.
+
+You need:
+
+- a GitHub Universe 2026 badge;
+- a USB-C cable that carries data (with a charge-only cable the badge's drive
+  never appears);
+- this repository: `git clone https://github.com/martijnvankempen/pewpew.git`,
+  or **Code > Download ZIP** on GitHub and unzip it.
+
+### Copy it by hand
+
+1. Connect the badge to your computer.
+2. Put the badge in USB Disk Mode: quickly double-tap its RESET button, or open
+   the **Mass Storage** app from the badge menu. After a few seconds a drive
+   called **BADGER** appears.
+3. Open BADGER. It has an `apps` folder (on some badges `system/apps`).
+4. Copy the `badge/apps/pewpew` folder from this repository into that `apps`
+   folder. Copy the folder itself, so you end up with
+   `BADGER/apps/pewpew/__init__.py`.
+5. Eject BADGER like a USB stick and wait for the drive to disappear. The
+   badge restarts into the menu; press RESET if it doesn't. On Windows, "An
+   error occurred while ejecting 'BADGER'" is harmless: the badge restarts as
+   soon as it gets the request, after the files are written.
+6. In the menu, move to the **Pewpew** tile with the buttons and press SELECT.
+   It comes after the badge's own apps.
+
+### Or use the badger/home scripts
+
+[badger/home](https://github.com/badger/home) has scripts that switch the
+badge to USB Disk Mode, copy the app and eject the drive for you. They need
+Python 3 and `mpremote`. Run them from the root of this repository.
+
+macOS or Linux:
+
+```sh
+git clone --depth 1 https://github.com/badger/home ~/src/badger-home
+python3 -m pip install mpremote
+scripts=~/src/badger-home/.github/skills/hyb26-skill/scripts
+
+python3 $scripts/badge_serial.py disk-mode            # reboots into USB Disk Mode
+python3 $scripts/deploy_app.py badge/apps/pewpew      # lists what it would copy
+python3 $scripts/deploy_app.py badge/apps/pewpew --write
+python3 $scripts/badge_serial.py eject
+```
+
+Windows (PowerShell, not WSL: WSL doesn't see the badge's USB port or the
+BADGER drive):
+
+```powershell
+git clone --depth 1 https://github.com/badger/home $HOME\src\badger-home
+python -m pip install mpremote
+$scripts = "$HOME\src\badger-home\.github\skills\hyb26-skill\scripts"
+
+python $scripts\badge_serial.py disk-mode
+python $scripts\deploy_app.py badge\apps\pewpew
+python $scripts\deploy_app.py badge\apps\pewpew --write
+python $scripts\badge_serial.py eject
+```
+
+- `deploy_app.py` finds BADGER by itself; if it doesn't, add `--mount` with
+  the drive, for example `--mount E:\` or `--mount /Volumes/BADGER`.
+- If `disk-mode` fails on your badge's firmware, double-tap RESET instead.
+- If pip refuses to install `mpremote` ("externally managed"), use
+  `pipx install mpremote`.
+
+### Update to a new version
+
+Get the new version (`git pull`, or download the ZIP again) and copy it
+again. By hand, delete `BADGER/apps/pewpew` first. With the script, add
+`--replace`; it keeps the old version in `BADGER/.badge-app-backups`:
+
+```sh
+python3 $scripts/deploy_app.py badge/apps/pewpew --write --replace
+```
+
+The Hall of Fame, best score and settings live outside the app folder, in
+`/state/pewpew.json`, so updates keep them.
+
+### Pew on the menu tile
+
+The menu on badges from the event shows a default icon for apps that don't
+come with the badge. To show Pew's face (`icon.png`) on the tile instead,
+patch the menu once per badge, in USB Disk Mode:
+
+```sh
+python3 $scripts/badge_serial.py info               # "menu icon.png support: yes/no"
+python3 $scripts/patch_menu_icons.py                # preview
+python3 $scripts/patch_menu_icons.py --write
+python3 $scripts/badge_serial.py eject
+```
+
+The patch keeps the original menu in `BADGER/.badge-app-backups`. The game
+works the same without it.
+
+### Remove it
+
+In USB Disk Mode, delete `BADGER/apps/pewpew` and eject. The scores stay in
+`/state/pewpew.json`, which isn't on the BADGER drive. To clear them, for
+example to start a fresh Hall of Fame on an event day, run this with the
+port from `badge_serial.py port` (such as `COM5` or `/dev/ttyACM0`) and press
+RESET afterwards:
+
+```sh
+mpremote connect PORT exec "import os; os.remove('/state/pewpew.json')"
+```
+
+### If something goes wrong
+
+| Problem | What to do |
+| --- | --- |
+| No BADGER drive | Use a data cable. Double-tap RESET faster, or open the Mass Storage app. |
+| A drive called RP2350 appears | That's the firmware bootloader, not the badge's storage. Don't copy anything there; press RESET once and try again. |
+| Pewpew isn't in the menu | Check that `BADGER/apps/pewpew/__init__.py` exists (not `apps/pewpew/pewpew/...` or `apps/badge/...`), then press RESET. |
+| The tile has a default icon | See [Pew on the menu tile](#pew-on-the-menu-tile). |
+| The badge doesn't restart after ejecting | Press RESET. |
+| The game stops with an error | Run `mpremote connect PORT resume repl`, start the game from the menu and read the error; Ctrl-] exits. |
 
 ## How to play
 
@@ -273,17 +398,5 @@ It serves the Badge Simulator page from the badger/home clone, runs
 `badge/apps/pewpew` in it and accepts scripted presses, screenshots and code
 (`/ctl/press`, `/ctl/screenshot`, `/ctl/exec`; see the top of the script).
 The simulator always reports a level badge, so tilt-to-steer and the case
-LEDs need real hardware.
-
-## Install on a badge
-
-Connect the badge over USB, then preview and copy the app:
-
-```sh
-python3 $scripts/deploy_app.py badge/apps/pewpew
-python3 $scripts/deploy_app.py badge/apps/pewpew --write
-```
-
-Or put the badge in USB Disk Mode (double-tap RESET) and copy
-`badge/apps/pewpew` to `BADGER/apps/pewpew`. Stock menus need the menu icon
-patch (`patch_menu_icons.py`) to show `icon.png`.
+LEDs need real hardware. To put it on a real badge, see
+[Install on your badge](#install-on-your-badge).
