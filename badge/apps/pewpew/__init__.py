@@ -27,11 +27,12 @@ LARGE_CAPS = (5, 18)
 SMALL_CAPS = (3, 11)
 
 WHITE = color.rgb(255, 255, 255)
-DIM = color.rgb(150, 160, 190)
+DIM = color.rgb(175, 185, 215)
 SHADOW = color.rgb(0, 0, 0, 160)
 VEIL = color.rgb(0, 0, 0, 150)
-DARK_VEIL = color.rgb(4, 6, 14, 215)
-BAR_BACK = color.rgb(0, 0, 0, 110)
+DARK_VEIL = color.rgb(4, 6, 14, 235)
+BAR_BACK = color.rgb(0, 0, 0, 170)
+PANEL = color.rgb(0, 0, 0, 120)
 GOLD = color.rgb(255, 228, 90)
 PINK = color.rgb(255, 140, 215)
 NAVY = color.rgb(41, 65, 89)
@@ -250,6 +251,7 @@ class Game:
         self.ghosts = []
         self.callout = None
         self.burst_at = -9999
+        self.burst_queued = False
         self.next_boom = 0
         self.clear_text = ""
         self.perfect = False
@@ -307,6 +309,7 @@ class Game:
         self.ghosts = []
         self.callout = None
         self.burst_at = -9999
+        self.burst_queued = False
         self.pew = Pew()
         self.particles.clear()
         self.rings.clear()
@@ -346,7 +349,7 @@ class Game:
         for z in self.fleet.zaps:
             self.particles.burst(z[0], z[1], ZAP_PEN, 3, 25)
         self.fleet.zaps = []
-        self.popups.add(W / 2, 74, "+%d" % bonus, (255, 228, 90), 1200)
+        self.popups.add(W / 2, 86, "+%d" % bonus, (255, 228, 90), 1200)
 
     def lose_life(self):
         x, y = self.pew.centre()
@@ -453,6 +456,8 @@ class Game:
             self.freeze -= dt_ms
             if self.demo and self.any_pressed():
                 self.go_title(now)
+            elif badge.pressed(BUTTON_UP):
+                self.burst_queued = True
             return
 
         if self.state != Game.PAUSE:
@@ -606,7 +611,8 @@ class Game:
         else:
             axis = self.controls.axis(dt_ms)
             fire = badge.held(BUTTON_SELECT) or badge.pressed(BUTTON_SELECT)
-            use_burst = badge.pressed(BUTTON_UP)
+            use_burst = badge.pressed(BUTTON_UP) or self.burst_queued
+        self.burst_queued = False
         pew.move(axis, dt)
         if fire and pew.fire(now):
             self.shots += 1
@@ -715,12 +721,13 @@ class Game:
 
         if boss.dying and now >= self.next_boom:
             # Chain of explosions across the hull while it goes down.
-            self.next_boom = now + 90
+            self.next_boom = now + 70
             x = boss.x + random.uniform(4, BOSS_W - 4)
             y = boss.y + random.uniform(2, BOSS_H - 6)
             pen = (BOSS_PEN, GOLD, WHITE, PINK)[random.randrange(4)]
-            self.particles.burst(x, y, pen, 6, 60)
-            self.rings.add(x, y, (255, 228, 160), 12, 260)
+            self.particles.burst(x, y, pen, 8, 70)
+            self.rings.add(x, y, (255, 228, 160), 14, 280)
+            self.flash.kick(0.25, (255, 200, 120))
             self.shake.kick(1.5)
             self.glow.flash(0.8)
         if boss.count == 0 and self.phase == Game.FIGHT:
@@ -817,18 +824,16 @@ class Game:
         score_text = "%05d" % int(self.shown_score)
         shadow_text(score_text, 2, 0)
         mult = self.multiplier()
-        if mult > 1:
-            width, _ = screen.measure_text(score_text)
-            pulse = (now // 120) % 2
-            shadow_text("x%d" % mult, 5 + width, 0, GOLD if pulse else PINK)
 
+        # One centre slot: the burst prompt blinks over the combo, which replaces HI.
         pew = self.pew
-        if self.demo:
+        if pew.charged() and not self.demo and (now // 250) % 2:
+            centre_text("UP: BURST!", 0, PINK)
+        elif mult > 1:
+            centre_text("COMBO x%d" % mult, 0, GOLD if (now // 120) % 2 else PINK)
+        elif self.demo:
             centre_text("DEMO", 0, DIM)
-        elif pew.charged():
-            if (now // 250) % 2:
-                centre_text("UP: BURST!", 0, PINK)
-        else:
+        elif not pew.charged():
             centre_text("HI %d" % max(best_score(), self.score), 0, DIM)
 
         for i in range(pew.lives):
@@ -902,9 +907,9 @@ class Game:
     def draw_demo_overlay(self, now):
         if (now // 600) % 2:
             screen.pen = BAR_BACK
-            screen.rectangle(0, 82, W, 12)
+            screen.rectangle(0, 68, W, 12)
             screen.font = SMALL
-            centre_text("PRESS SELECT TO PLAY", 82, GOLD)
+            centre_text("PRESS SELECT TO PLAY", 68, GOLD)
 
     def draw_title(self, now):
         t = now - self.title_at
@@ -965,13 +970,13 @@ class Game:
             return
         screen.font = SMALL
         pulse = 0.5 + 0.5 * math.sin(now / 160)
-        centre_text("PRESS SELECT", 79, color.rgb(255, int(200 + 55 * pulse), int(90 + 140 * pulse)))
+        centre_text("PRESS SELECT", 77, color.rgb(255, int(200 + 55 * pulse), int(90 + 140 * pulse)))
         top = saved["board"][0] if saved["board"] else ["---", 0]
         if top[1] >= best_score():
-            centre_text("HI %d  %s" % (best_score(), top[0]), 92, DIM)
+            centre_text("HI %d  %s" % (best_score(), top[0]), 88, DIM)
         else:
-            centre_text("HI %d" % best_score(), 92, DIM)
-        centre_text("DOWN: TILT %s" % ("ON" if saved["tilt"] else "OFF"), 104, DIM)
+            centre_text("HI %d" % best_score(), 88, DIM)
+        centre_text("DOWN: TILT %s" % ("ON" if saved["tilt"] else "OFF"), 99, DIM)
 
     def draw_comet(self, now):
         if self.comet is None or now > self.comet[4]:
@@ -991,6 +996,8 @@ class Game:
     def draw_scores(self, now):
         t = now - self.state_at
         label("HALL OF FAME", GOLDEN).draw(W / 2, 14, punch(t))
+        screen.pen = PANEL
+        screen.rectangle(8, 27, W - 16, 15 * len(saved["board"]) + 2)
         screen.font = SMALL
         for i, (name, value) in enumerate(saved["board"]):
             slide = ease_out_back((t - 200 - i * 90) / 350)
@@ -1000,16 +1007,18 @@ class Game:
             x = int(W * (1 - slide))
             pen = MEDALS[i] if i < 3 else DIM
             if i == self.highlight:
-                screen.pen = color.rgb(255, 140, 215, 60 + int(50 * math.sin(now / 120)))
-                screen.rectangle(x + 10, y - 1, W - 20, 13)
-                pen = PINK if (now // 200) % 2 else WHITE
+                screen.pen = color.rgb(255, 140, 215, 110 + int(60 * math.sin(now / 120)))
+                screen.rectangle(x + 9, y - 1, W - 18, 13)
+                pen = GOLD if (now // 200) % 2 else WHITE
+                screen.pen = pen
+                screen.triangle(vec2(x + 4, y + 2), vec2(x + 4, y + 8), vec2(x + 8, y + 5))
             shadow_text("%d" % (i + 1), x + 16, y, pen)
             shadow_text(name, x + 36, y, pen)
             score = "%d" % value
             width, _ = screen.measure_text(score)
             shadow_text(score, x + W - 16 - width, y, pen)
         if t > 1200 and (now // 500) % 2:
-            centre_text("PRESS SELECT", 108, GOLD)
+            centre_text("PRESS SELECT", 105, GOLD)
 
     def draw_over(self, now):
         age = now - self.over_at
@@ -1019,7 +1028,7 @@ class Game:
             centre_text("%d" % int(self.shown_score), 38, WHITE, 2)
         if age > 600:
             accuracy = 100 * self.hits // self.shots if self.shots else 0
-            centre_text("WAVE %d   HIT %d%%" % (self.wave, accuracy), 62, DIM)
+            centre_text("WAVE %d   HIT %d%%" % (self.wave, accuracy), 60, DIM)
             centre_text("BEST COMBO %d" % self.best_combo, 72, DIM)
         if age > 800:
             if self.new_best:
@@ -1050,7 +1059,7 @@ class Game:
                 screen.pen = GOLD
                 screen.shape(shape.rectangle(x - 4, 48, 24, 28).stroke(1))
                 bob = int(math.sin(now / 120))
-                screen.pen = PINK
+                screen.pen = GOLD
                 screen.triangle(vec2(x + 8, 42 + bob), vec2(x + 4, 46 + bob), vec2(x + 12, 46 + bob))
                 screen.triangle(vec2(x + 8, 82 - bob), vec2(x + 4, 78 - bob), vec2(x + 12, 78 - bob))
             shadow_text(ch, x, 46, pen, 2)
