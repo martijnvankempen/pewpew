@@ -24,7 +24,8 @@ alien hit charges the Octo-burst; ten hits fill the bar along the bottom of
 the screen. Stars also cancel alien zaps. Clear all 15 aliens to start a
 faster wave; you lose when your three lives are gone or the fleet reaches Pew.
 
-Losing plays a 6-second sponsor ad that can't be skipped (get yourself
+Losing shows "DO BETTER!" for 8 seconds while Pew fires a firework show of
+stars and Octo-bursts, then plays a 6-second sponsor ad that can't be skipped (get yourself
 forklift certified, sponsored by CoE), then the name entry for a top-five
 score or the title screen.
 
