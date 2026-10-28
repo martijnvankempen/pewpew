@@ -64,6 +64,10 @@ MAX_FRAME_MS = 100
 BANNER_MS = 1300
 AD_MS = 6000
 AD_DRIVE_MS = 600
+DEFEAT_MS = 8000
+DEFEAT_RISE_MS = 500
+DEFEAT_FIRE_MS = 140
+DEFEAT_BURST_MS = 1700
 HELP_MS = 7000
 HELP_GUARD_MS = 300
 CLEAR_MS = 2000
@@ -346,6 +350,7 @@ class Game:
     ENTRY = 4
     SCORES = 5
     HELP = 6
+    DEFEAT = 7
 
     FIGHT = 0
     CLEAR = 1
@@ -392,6 +397,8 @@ class Game:
         self.title_at = 0
         self.title_landed = False
         self.comet = None
+        self.show = None
+        self.next_burst = 0
         self.go_title(badge.ticks)
 
     # ---- state changes -------------------------------------------------------
@@ -507,9 +514,62 @@ class Game:
         if self.score > saved["highscore"]:
             saved["highscore"] = self.score
             State.save("pewpew", saved)
+        self.do_better(now)
+
+    def do_better(self, now):
+        """Before the ad: DO BETTER! while Pew puts on a firework show anyway."""
         self.particles.clear()
-        self.glow.alarm(now, AD_MS)
-        self.set_state(Game.AD, now)
+        self.rings.clear()
+        self.popups.clear()
+        self.space.warp_target = 0.0
+        self.show = Pew()
+        self.show.y = H
+        self.next_burst = DEFEAT_BURST_MS
+        self.set_state(Game.DEFEAT, now)
+
+    def update_defeat(self, now, dt_ms):
+        t = now - self.state_at
+        show = self.show
+        # Pew pops up from the bottom edge, then sways side to side while firing.
+        rise = min(1.0, t / DEFEAT_RISE_MS)
+        show.y = H + (HOME_Y - H) * ease_out_back(rise)
+        show.x = (W - SPRITE_W) / 2 + math.sin(t / 650) * 46
+        if t >= DEFEAT_RISE_MS:
+            if show.fire(t):
+                show.next_fire = t + DEFEAT_FIRE_MS
+                star = show.stars[-1]
+                star.vx = random.uniform(-14, 14)
+                star.pop = random.uniform(14, 62)
+                self.particles.burst(star.x, star.y, GOLD, 3, 30)
+            if t >= self.next_burst:
+                self.next_burst = t + DEFEAT_BURST_MS
+                show.charge = CHARGE_FULL
+                show.burst()
+                for star in show.stars:
+                    if star.burst and not hasattr(star, "pop"):
+                        star.pop = random.uniform(6, 40)
+                x, y = show.centre()
+                self.rings.add(x, y, (255, 140, 215), 40, 450)
+                self.flash.kick(0.3, (255, 140, 215))
+                self.shake.kick(2)
+                self.glow.chase(now)
+        show.update_stars(dt_ms / 1000)
+        for star in show.stars[:]:
+            if star.y < getattr(star, "pop", -99):
+                # Each star bursts into a little firework.
+                show.stars.remove(star)
+                pens = (PINK, WHITE) if star.burst else (GOLD, (CYAN, PINK, WHITE)[random.randrange(3)])
+                self.particles.burst(star.x, star.y, pens[0], 8, 60)
+                self.particles.burst(star.x, star.y, pens[1], 4, 35)
+                rgb = (255, 140, 215) if star.burst else (255, 228, 90)
+                self.rings.add(star.x, star.y, rgb, 12, 300)
+                self.glow.flash(0.6)
+        if t >= DEFEAT_MS:
+            self.show = None
+            self.particles.clear()
+            self.rings.clear()
+            self.glow.alarm(now, AD_MS)
+            self.set_state(Game.AD, now)
 
     def end_ad(self, now):
         if self.rank is not None:
@@ -648,6 +708,9 @@ class Game:
                 self.set_state(Game.PLAY, now)
             elif badge.pressed(BUTTON_BACK):
                 self.go_title(now)
+        elif self.state == Game.DEFEAT:
+            # Like the ad that follows, this can't be skipped.
+            self.update_defeat(now, dt_ms)
         elif self.state == Game.AD:
             # Unskippable: no button does anything until the ad has run.
             t = now - self.state_at
@@ -888,6 +951,8 @@ class Game:
             self.draw_scores(now)
         elif self.state == Game.HELP:
             self.draw_help(now)
+        elif self.state == Game.DEFEAT:
+            self.draw_defeat(now)
         elif self.state == Game.AD:
             self.draw_ad(now)
         else:
@@ -1205,6 +1270,22 @@ class Game:
 
         if t >= HELP_GUARD_MS:
             point_select(now, "PRESS TO PLAY")
+
+    def draw_defeat(self, now):
+        t = now - self.state_at
+        ox, oy = self.shake.offset()
+        self.draw_veil()
+        self.rings.draw(ox, oy)
+        self.show.draw(t, ox, oy)
+        self.particles.draw(ox, oy)
+        if t > 150:
+            age = t - 150
+            # Slams in, then wobbles gently; a shine sweeps across every so often.
+            scale = punch(age, 260) if age < 260 else 1 + 0.05 * math.sin(age / 180)
+            label("DO BETTER!", CRIMSON).draw(W / 2 + ox, 30 + oy, scale, age < 60 or (now // 110) % 9 == 0)
+        if t > 900:
+            screen.font = SMALL
+            centre_text("SCORE %d" % self.score, 46, GOLD)
 
     def draw_ad(self, now):
         t = now - self.state_at

@@ -24,10 +24,10 @@ badge's 160x120 screen is shown at 2x in the animation and 3x in the stills.
 | **Title**: the arrow points at the real SELECT button | **How to play**: arrows to every control | **Wave 1**: the fleet bobs and changes pace |
 | ![Two aliens diving at Pew](docs/screenshots/divers.png) | ![Octo-burst: a fan of pink stars](docs/screenshots/octo-burst.png) | ![WAVE CLEAR and PERFECT!](docs/screenshots/wave-clear.png) |
 | **Divers** swoop down at Pew | **Octo-burst**: seven stars at once | **Wave clear**, with a PERFECT bonus |
-| ![Boss WARNING: MERGE CONFLICT](docs/screenshots/boss-warning.png) | ![Boss fight with a health bar](docs/screenshots/boss.png) | ![The forklift sponsor ad](docs/screenshots/ad.png) |
-| **Boss warning** every third wave | **Boss fight** with its health bar | **Game over**: the 6-second sponsor ad |
-| ![Name entry for a top-5 score](docs/screenshots/name-entry.png) | ![Hall of Fame](docs/screenshots/hall-of-fame.png) | |
-| **Name entry** for a top-5 score | **Hall of Fame** | |
+| ![Boss WARNING: MERGE CONFLICT](docs/screenshots/boss-warning.png) | ![Boss fight with a health bar](docs/screenshots/boss.png) | ![DO BETTER! while Pew fires stars that burst into fireworks](docs/screenshots/do-better.png) |
+| **Boss warning** every third wave | **Boss fight** with its health bar | **Game over**: DO BETTER! for 8 seconds |
+| ![The forklift sponsor ad](docs/screenshots/ad.png) | ![Name entry for a top-5 score](docs/screenshots/name-entry.png) | ![Hall of Fame](docs/screenshots/hall-of-fame.png) |
+| **Then** the 6-second sponsor ad | **Name entry** for a top-5 score | **Hall of Fame** |
 
 ## Install on your badge
 
@@ -179,7 +179,7 @@ the screen below it.
 | HOME (touch pill) | Esc | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu | Back to the badge menu |
 
 The controls follow the screen when you hold the badge upside down. No button
-does anything during the ad.
+does anything during DO BETTER! or the ad.
 
 You don't need to know the button names: whenever the game wants SELECT
 ("PRESS TO PLAY", "RESUME", "NEXT"), a bouncing arrow at the bottom edge of
@@ -253,20 +253,33 @@ life, resets the combo (Octo-burst stars that miss don't count).
 
 The five best scores are kept on the badge with three-letter initials. It
 starts with made-up scores to beat, arcade style. When your score makes
-the table, the name entry follows the ad, and it remembers the
+the table, the name entry follows DO BETTER! and the ad, and it remembers the
 last initials you used. The Hall of Fame is saved straight away and shown with your
 new row highlighted.
 
+### DO BETTER!
+
+<p align="center">
+  <img src="docs/screenshots/do-better.gif" alt="Animated: DO BETTER! over Pew, who sways side to side firing stars that burst into fireworks, with Octo-burst fans" width="320">
+</p>
+
+When you lose, "DO BETTER!" slams onto the screen for 8 seconds with your
+final score, and no button can skip it. Pew isn't fazed: it pops up from the
+bottom and sways side to side, firing from alternating finger-guns. Every
+star bursts into a little firework of sparks and a ring, and every couple
+of seconds an Octo-burst fan goes off with a pink shockwave while the case
+LEDs chase. Then the ad starts.
+
 ### The ad
 
-When you lose, a 6-second sponsor ad plays and no button can skip it. A red
+After DO BETTER!, a 6-second sponsor ad plays and no button can skip it. A red
 forklift reverses in on a spinning sunburst with "GET YOURSELF FORKLIFT
 CERTIFIED!", a five-star rating and "SPONSORED BY CoE". The top bar shows
 GAME OVER and your
 final score; the bottom bar counts down and fills up, and the case LEDs pulse
 like a forklift's warning beacon. After the ad you go to the name entry if
 your score made the Hall of Fame, otherwise back to the title screen. The
-self-playing demo never shows the ad.
+self-playing demo never shows DO BETTER! or the ad.
 
 ### The alien fleet
 
@@ -346,7 +359,7 @@ them.
 
 | Path | What |
 | --- | --- |
-| `badge/apps/pewpew/__init__.py` | App setup, screens (title, how to play, attract demo, play, pause, game-over ad, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
+| `badge/apps/pewpew/__init__.py` | App setup, screens (title, how to play, attract demo, play, pause, DO BETTER!, game-over ad, name entry, Hall of Fame), waves and bosses, combo, HUD, saved data |
 | `badge/apps/pewpew/pew.py` | Pew: movement, alternating shots, Octo-burst, lives |
 | `badge/apps/pewpew/aliens.py` | The fleet: fly-in, march, pace changes, divers, zaps, hit tests |
 | `badge/apps/pewpew/boss.py` | The boss: entry, movement, fan/aimed/laser attacks, damage, death |
