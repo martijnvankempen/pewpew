@@ -24,10 +24,10 @@ badge's 160x120 screen is shown at 2x in the animation and 3x in the stills.
 | **Title**: the arrow points at the real SELECT button | **How to play**: arrows to every control | **Wave 1**: the fleet bobs and changes pace |
 | ![Two aliens diving at Pew](docs/screenshots/divers.png) | ![Octo-burst: a fan of pink stars](docs/screenshots/octo-burst.png) | ![WAVE CLEAR and PERFECT!](docs/screenshots/wave-clear.png) |
 | **Divers** swoop down at Pew | **Octo-burst**: seven stars at once | **Wave clear**, with a PERFECT bonus |
-| ![Boss WARNING: MERGE CONFLICT](docs/screenshots/boss-warning.png) | ![Boss fight with a health bar](docs/screenshots/boss.png) | ![The forklift sponsor ad](docs/screenshots/ad.png) |
-| **Boss warning** every third wave | **Boss fight** with its health bar | **Game over**: the 6-second sponsor ad |
-| ![Name entry for a top-5 score](docs/screenshots/name-entry.png) | ![Hall of Fame](docs/screenshots/hall-of-fame.png) | |
-| **Name entry** for a top-5 score | **Hall of Fame** | |
+| ![Boss WARNING: MERGE CONFLICT](docs/screenshots/boss-warning.png) | ![Boss fight with a health bar](docs/screenshots/boss.png) | ![DO BETTER! while Pew fires stars that burst into fireworks](docs/screenshots/do-better.png) |
+| **Boss warning** every third wave | **Boss fight** with its health bar | **Game over**: DO BETTER! for 8 seconds |
+| ![The forklift sponsor ad](docs/screenshots/ad.png) | ![Name entry for a top-5 score](docs/screenshots/name-entry.png) | ![Hall of Fame](docs/screenshots/hall-of-fame.png) |
+| **Then** the 6-second sponsor ad | **Name entry** for a top-5 score | **Hall of Fame** |
 
 ## Install on your badge
 
@@ -258,6 +258,10 @@ last initials you used. The Hall of Fame is saved straight away and shown with y
 new row highlighted.
 
 ### DO BETTER!
+
+<p align="center">
+  <img src="docs/screenshots/do-better.gif" alt="Animated: DO BETTER! over Pew, who sways side to side firing stars that burst into fireworks, with Octo-burst fans" width="320">
+</p>
 
 When you lose, "DO BETTER!" slams onto the screen for 8 seconds with your
 final score, and no button can skip it. Pew isn't fazed: it pops up from the
